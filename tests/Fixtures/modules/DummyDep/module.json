@@ -1,0 +1,20 @@
+{
+    "name": "DummyDep",
+    "alias": "dummydep",
+    "description": "Test fixture depending on dummy — exercises dependency resolution flows.",
+    "providers": [
+        "Modules\\DummyDep\\Providers\\DummyDepServiceProvider"
+    ],
+    "zenon": {
+        "id": "zenon/dummydep",
+        "version": "1.0.0",
+        "core": false,
+        "requires": {"dummy": "^1.0"},
+        "provides": [],
+        "hooks": {"emits": []},
+        "permissions": [],
+        "frontend": {"entry": null, "remote": null},
+        "platform": "^1.0",
+        "defaultEnabled": false
+    }
+}

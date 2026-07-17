@@ -1,0 +1,20 @@
+{
+    "name": "DummyCore",
+    "alias": "dummycore",
+    "description": "Test fixture flagged core: true — exercises auto-enable provisioning and non-disableability.",
+    "providers": [
+        "Modules\\DummyCore\\Providers\\DummyCoreServiceProvider"
+    ],
+    "zenon": {
+        "id": "zenon/dummycore",
+        "version": "1.0.0",
+        "core": true,
+        "requires": {},
+        "provides": [],
+        "hooks": {"emits": []},
+        "permissions": [],
+        "frontend": {"entry": null, "remote": null},
+        "platform": "^1.0",
+        "defaultEnabled": false
+    }
+}

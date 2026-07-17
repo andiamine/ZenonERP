@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
-         bootstrap="vendor/autoload.php"
+         bootstrap="tests/bootstrap.php"
          colors="true"
 >
     <testsuites>
@@ -29,6 +29,7 @@
         <env name="DB_URL" value=""/>
         <env name="DB_CACHE_CONNECTION" value="sqlite"/>
         <env name="TENANCY_DB_SUFFIX" value=".sqlite"/>
+        <env name="MODULES_STATUSES_FILE" value="storage/framework/testing/modules_statuses.json"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

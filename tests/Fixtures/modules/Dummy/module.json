@@ -1,0 +1,20 @@
+{
+    "name": "Dummy",
+    "alias": "dummy",
+    "description": "Permanent test fixture — exercises the full module lifecycle (CLAUDE.md §12 Phase 2 acceptance).",
+    "providers": [
+        "Modules\\Dummy\\Providers\\DummyServiceProvider"
+    ],
+    "zenon": {
+        "id": "zenon/dummy",
+        "version": "1.0.0",
+        "core": false,
+        "requires": {},
+        "provides": ["dummy.items"],
+        "hooks": {"emits": []},
+        "permissions": [],
+        "frontend": {"entry": null, "remote": null},
+        "platform": "^1.0",
+        "defaultEnabled": false
+    }
+}

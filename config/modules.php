@@ -101,7 +101,7 @@ return [
         | This path will also be added automatically to the list of scanned folders.
         |
         */
-        'modules' => base_path('Modules'),
+        'modules' => base_path('modules/zenon'),
 
         /*
         |--------------------------------------------------------------------------
@@ -261,7 +261,7 @@ return [
     'scan' => [
         'enabled' => true,
         'paths' => [
-            base_path('addons/*'),
+            base_path('modules/thirdparty/*'),
         ],
     ],
 

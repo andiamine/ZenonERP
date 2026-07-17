@@ -52,4 +52,31 @@ return [
 
     'registry_cache_ttl' => (int) env('ZENON_REGISTRY_CACHE_TTL', 3600),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Reserved Subdomains
+    |--------------------------------------------------------------------------
+    |
+    | Subdomains that can never be claimed as tenant identifiers — they are
+    | (or may become) infrastructure hostnames on the platform base domain.
+    |
+    */
+
+    'reserved_subdomains' => [
+        'app',
+        'www',
+        'api',
+        'admin',
+        'central',
+        'mail',
+        'smtp',
+        'ftp',
+        'status',
+        'install',
+        'assets',
+        'cdn',
+        'staging',
+        'test',
+    ],
+
 ];

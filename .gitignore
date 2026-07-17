@@ -31,3 +31,4 @@ Thumbs.db
 # Local, user-specific — not shared
 /CLAUDE.md
 /.claude/
+/database/zenon_tenant_*

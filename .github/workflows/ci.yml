@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl, pdo_sqlite
+          coverage: none
+
+      - run: composer install --prefer-dist --no-progress --no-interaction
+
+      - run: composer lint
+
+      - run: composer analyse
+
+      - name: Prepare app environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - run: composer test

@@ -165,7 +165,9 @@ return [
             'provider' => ['path' => 'app/Providers', 'generate' => true],
             'repository' => ['path' => 'app/Repositories', 'generate' => false],
             'resource' => ['path' => 'app/Transformers', 'generate' => false],
-            'route-provider' => ['path' => 'app/Providers', 'generate' => true],
+            // Route mapping is owned by App\Foundation\Modules\ModuleServiceProvider
+            // (auto-wrapped /api/v1/{alias} + module.enabled middleware) — no per-module RouteServiceProvider.
+            'route-provider' => ['path' => 'app/Providers', 'generate' => false],
             'rules' => ['path' => 'app/Rules', 'generate' => false],
             'services' => ['path' => 'app/Services', 'generate' => false],
             'scopes' => ['path' => 'app/Models/Scopes', 'generate' => false],
@@ -220,8 +222,12 @@ return [
         |
         | This option for register migration automatically.
         |
+        | DISABLED deliberately: module migrations live in database/migrations/{tenant,central}
+        | subdirs and run ONLY through TenantModuleMigrator / ModuleManager — auto-discovery
+        | would leak files placed directly in database/migrations/ into the central migrator.
+        |
         */
-        'migrations' => true,
+        'migrations' => false,
 
         /*
         |--------------------------------------------------------------------------
@@ -260,9 +266,12 @@ return [
     */
     'scan' => [
         'enabled' => true,
-        'paths' => [
+        'paths' => array_values(array_filter([
             base_path('modules/thirdparty/*'),
-        ],
+            // Fixture modules for the standing module-foundation test suite; never present
+            // in a cached production config (guarded by APP_ENV).
+            env('APP_ENV') === 'testing' ? base_path('tests/Fixtures/modules/*') : null,
+        ])),
     ],
 
     /*
@@ -309,7 +318,12 @@ return [
     'activators' => [
         'file' => [
             'class' => FileActivator::class,
-            'statuses-file' => base_path('modules_statuses.json'),
+            // Derived boot artifact of the central `modules` table (kept in sync by
+            // ModuleManager, audited by zenon:module:doctor). Env override lets tests
+            // point at a throwaway file that exists before app bootstrap.
+            'statuses-file' => env('MODULES_STATUSES_FILE')
+                ? base_path(env('MODULES_STATUSES_FILE'))
+                : base_path('modules_statuses.json'),
         ],
     ],
 

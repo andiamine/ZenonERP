@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Carbon;
 use Modules\Core\Database\Factories\CompanyFactory;
 
 /**
@@ -22,6 +23,8 @@ use Modules\Core\Database\Factories\CompanyFactory;
  * @property string|null $timezone
  * @property bool $is_default
  * @property bool $active
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Company extends Model
 {

@@ -4,6 +4,7 @@ namespace Modules\Core\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Modules\Core\Database\Factories\CurrencyFactory;
 
 /**
@@ -13,6 +14,8 @@ use Modules\Core\Database\Factories\CurrencyFactory;
  * @property string|null $symbol
  * @property int $decimal_places
  * @property bool $active
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Currency extends Model
 {

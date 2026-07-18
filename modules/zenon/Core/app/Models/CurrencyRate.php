@@ -12,6 +12,8 @@ use Illuminate\Support\Carbon;
  * @property int|null $company_id
  * @property string $rate
  * @property Carbon $valid_from
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class CurrencyRate extends Model
 {

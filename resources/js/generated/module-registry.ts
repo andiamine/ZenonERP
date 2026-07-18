@@ -5,6 +5,19 @@
  */
 import type { RegistryEntry } from '@zenon/core/moduleTypes';
 
-export const moduleRegistry: Record<string, RegistryEntry> = {};
+export const moduleRegistry: Record<string, RegistryEntry> = {
+    audit: {
+        source: 'bundled',
+        load: () => import('@modules/Audit/resources/js/index'),
+    },
+    core: {
+        source: 'bundled',
+        load: () => import('@modules/Core/resources/js/index'),
+    },
+    sequence: {
+        source: 'bundled',
+        load: () => import('@modules/Sequence/resources/js/index'),
+    },
+};
 
-export const registryHash = '97d170e1550eee4afc0af065b78cda302a97674c';
+export const registryHash = '2b7aeb7b72170e1b6d55a3c8077d822815895656';

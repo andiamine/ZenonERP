@@ -32,10 +32,15 @@ class ProvisionTenantModules implements ShouldQueue
         /** @var list<string> $defaults */
         $defaults = config('zenon.default_modules', []);
 
-        $aliases = collect($registry->installed())
+        $installed = $registry->installed();
+
+        $aliases = collect($installed)
             ->filter(fn (ManifestData $manifest) => $manifest->core)
             ->keys()
-            ->merge($defaults)
+            // A default alias that isn't installed yet is skipped, not fatal — mirrors
+            // the "installed ∩ core" filter above and keeps provisioning tolerant of a
+            // config declaring a module before its code is deployed.
+            ->merge(array_values(array_intersect($defaults, array_keys($installed))))
             ->unique()
             ->values();
 

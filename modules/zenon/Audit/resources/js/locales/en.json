@@ -1,0 +1,52 @@
+{
+    "nav": {
+        "activity": "Activity"
+    },
+    "columns": {
+        "createdAt": "Date",
+        "causer": "By",
+        "system": "System",
+        "event": "Event",
+        "subject": "Record",
+        "description": "Description"
+    },
+    "events": {
+        "created": "Created",
+        "updated": "Updated",
+        "deleted": "Deleted"
+    },
+    "filters": {
+        "event": "Event",
+        "allEvents": "All events",
+        "subjectType": "Record type",
+        "subjectTypePlaceholder": "e.g. sales-order",
+        "causer": "User ID",
+        "causerPlaceholder": "e.g. 12",
+        "from": "From",
+        "to": "To"
+    },
+    "activity": {
+        "title": "Activity",
+        "empty": "No activity recorded yet.",
+        "view": "View",
+        "propertiesTitle": "Change details",
+        "noProperties": "No field changes recorded for this entry.",
+        "old": "Before",
+        "new": "After"
+    },
+    "widgets": {
+        "recent": {
+            "title": "Recent activity",
+            "empty": "No recent activity.",
+            "viewAll": "View all activity",
+            "justNow": "Just now",
+            "minutesAgo": "{{count}} min ago",
+            "hoursAgo": "{{count}} h ago",
+            "daysAgo": "{{count}} d ago"
+        }
+    },
+    "errors": {
+        "forbidden": "Access denied",
+        "generic": "Something went wrong"
+    }
+}

@@ -1,0 +1,52 @@
+{
+    "nav": {
+        "activity": "Activité"
+    },
+    "columns": {
+        "createdAt": "Date",
+        "causer": "Par",
+        "system": "Système",
+        "event": "Événement",
+        "subject": "Enregistrement",
+        "description": "Description"
+    },
+    "events": {
+        "created": "Créé",
+        "updated": "Modifié",
+        "deleted": "Supprimé"
+    },
+    "filters": {
+        "event": "Événement",
+        "allEvents": "Tous les événements",
+        "subjectType": "Type d'enregistrement",
+        "subjectTypePlaceholder": "ex. sales-order",
+        "causer": "ID utilisateur",
+        "causerPlaceholder": "ex. 12",
+        "from": "Du",
+        "to": "Au"
+    },
+    "activity": {
+        "title": "Activité",
+        "empty": "Aucune activité enregistrée pour le moment.",
+        "view": "Voir",
+        "propertiesTitle": "Détails de la modification",
+        "noProperties": "Aucune modification de champ enregistrée pour cette entrée.",
+        "old": "Avant",
+        "new": "Après"
+    },
+    "widgets": {
+        "recent": {
+            "title": "Activité récente",
+            "empty": "Aucune activité récente.",
+            "viewAll": "Voir toute l'activité",
+            "justNow": "À l'instant",
+            "minutesAgo": "il y a {{count}} min",
+            "hoursAgo": "il y a {{count}} h",
+            "daysAgo": "il y a {{count}} j"
+        }
+    },
+    "errors": {
+        "forbidden": "Accès refusé",
+        "generic": "Une erreur s'est produite"
+    }
+}

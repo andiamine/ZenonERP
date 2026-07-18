@@ -1,0 +1,51 @@
+{
+    "nav": {
+        "sequences": "Séquences"
+    },
+    "columns": {
+        "code": "Code",
+        "company": "Société",
+        "mask": "Masque",
+        "nextNumber": "Prochain numéro",
+        "resetPeriod": "Réinitialisation",
+        "preview": "Aperçu",
+        "label": "Libellé",
+        "perCompany": "Par société",
+        "gapless": "Sans lacune",
+        "materialized": "Statut"
+    },
+    "resetPeriod": {
+        "never": "Jamais",
+        "year": "Annuelle",
+        "month": "Mensuelle"
+    },
+    "shared": "Partagée (toutes sociétés)",
+    "common": {
+        "yes": "Oui",
+        "no": "Non"
+    },
+    "sequences": {
+        "title": "Séquences",
+        "empty": "Aucune séquence tirée pour le moment.",
+        "edit": "Modifier le masque"
+    },
+    "definitions": {
+        "title": "Définitions enregistrées",
+        "empty": "Aucune définition de séquence enregistrée.",
+        "materialized": "Utilisée",
+        "notMaterialized": "Pas encore utilisée"
+    },
+    "tokens": {
+        "legend": "Jetons disponibles",
+        "seq": "Valeur brute du compteur",
+        "seqPadded": "Compteur, complété par des zéros sur 5 chiffres",
+        "year": "Année sur 4 chiffres",
+        "year2": "Année sur 2 chiffres",
+        "month": "Mois (01–12)",
+        "company": "Code société (vide pour une séquence partagée)"
+    },
+    "errors": {
+        "forbidden": "Accès refusé",
+        "generic": "Une erreur s'est produite"
+    }
+}

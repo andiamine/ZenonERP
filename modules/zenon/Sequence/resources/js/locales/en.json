@@ -1,0 +1,51 @@
+{
+    "nav": {
+        "sequences": "Sequences"
+    },
+    "columns": {
+        "code": "Code",
+        "company": "Company",
+        "mask": "Mask",
+        "nextNumber": "Next number",
+        "resetPeriod": "Reset",
+        "preview": "Preview",
+        "label": "Label",
+        "perCompany": "Per company",
+        "gapless": "Gapless",
+        "materialized": "Status"
+    },
+    "resetPeriod": {
+        "never": "Never",
+        "year": "Yearly",
+        "month": "Monthly"
+    },
+    "shared": "Shared (tenant-wide)",
+    "common": {
+        "yes": "Yes",
+        "no": "No"
+    },
+    "sequences": {
+        "title": "Sequences",
+        "empty": "No sequences drawn yet.",
+        "edit": "Edit mask"
+    },
+    "definitions": {
+        "title": "Registered definitions",
+        "empty": "No sequence definitions registered.",
+        "materialized": "In use",
+        "notMaterialized": "Not yet used"
+    },
+    "tokens": {
+        "legend": "Available tokens",
+        "seq": "Raw counter value",
+        "seqPadded": "Counter, zero-padded to 5 digits",
+        "year": "4-digit year",
+        "year2": "2-digit year",
+        "month": "Month (01–12)",
+        "company": "Company code (empty for tenant-wide)"
+    },
+    "errors": {
+        "forbidden": "Access denied",
+        "generic": "Something went wrong"
+    }
+}

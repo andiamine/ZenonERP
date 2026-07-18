@@ -157,8 +157,13 @@ return [
          * packages that use asset() calls inside the tenant app. To avoid such issues, you can
          * disable asset() helper tenancy and explicitly use tenant_asset() calls in places
          * where you want to use tenant-specific assets (product images, avatars, etc).
+         *
+         * ZenonERP: disabled (Phase 4). One SPA build serves every tenant (CLAUDE.md §7),
+         * so @vite/asset() URLs must stay global — with this enabled, tenant hosts rewrote
+         * build assets to /tenancy/assets/* (503). Tenant-specific files (zenon/files, M2)
+         * will use tenant_asset() explicitly.
          */
-        'asset_helper_tenancy' => true,
+        'asset_helper_tenancy' => false,
     ],
 
     /**

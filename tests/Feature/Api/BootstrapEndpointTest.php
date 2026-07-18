@@ -1,5 +1,6 @@
 <?php
 
+use App\Foundation\Frontend\GeneratedModuleRegistry;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -43,7 +44,9 @@ it('returns the full SPA boot payload', function () {
         ->assertJsonPath('data.current_company_id', null)
         ->assertJsonPath('data.remote_modules', [])
         ->assertJsonPath('data.locale', 'en')
-        ->assertJsonPath('data.registryHash', null);
+        // The hash advertised to the SPA is parsed from the committed registry artifact.
+        ->assertJsonPath('data.registryHash', app(GeneratedModuleRegistry::class)->hash())
+        ->assertJsonPath('data.registryHash', fn ($hash) => is_string($hash) && preg_match('/^[0-9a-f]{40}$/', $hash) === 1);
 });
 
 it('requires authentication', function () {

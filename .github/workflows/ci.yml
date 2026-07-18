@@ -29,3 +29,25 @@ jobs:
           php artisan key:generate
 
       - run: composer test
+
+      # discovered() is filesystem-only, so the staleness gate needs no database.
+      - name: Frontend registry staleness gate
+        run: php artisan zenon:frontend:generate --check
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm run lint
+
+      - run: npm run build

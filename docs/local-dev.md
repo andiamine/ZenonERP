@@ -54,6 +54,32 @@ curl -X POST http://app.zenonerp.test/api/v1/signup \
   -d '{"subdomain":"acme","name":"Acme Inc."}'
 ```
 
+## Frontend (SPA)
+
+Node 22 + npm. One Vite build serves every tenant (`resources/js/main.tsx` entry;
+per-module chunks come from the generated registry).
+
+```bash
+npm install
+npm run dev        # Vite dev server + HMR — page stays on Apache (:80), assets come
+                   # from the Vite origin; laravel-vite-plugin's default CORS already
+                   # allows every *.test origin, so tenant subdomains just work
+npm run build      # production build → public/build, served by Apache (no Node at runtime)
+npm run typecheck  # tsc --noEmit
+npm run lint       # eslint (includes the cross-module import ban)
+php artisan zenon:frontend:generate          # regenerate resources/js/generated/module-registry.ts (committed)
+php artisan zenon:frontend:generate --check  # CI staleness gate — fails if the committed file is stale
+```
+
+Notes:
+- `app.blade.php` guards `@vite` behind a manifest/hot-file check so PHP tests and
+  CI run build-less; `@viteReactRefresh` before `@vite` is required for dev mode
+  (React fast-refresh preamble) — don't remove either.
+- If a killed dev server leaves a stale `public/hot`, delete it — Laravel will
+  otherwise point asset URLs at the dead Vite origin.
+- Dev tenant login: `admin@acme.test` / `password` at `http://acme.zenonerp.test`
+  (central operator `ops@zenonerp.test` — no central UI yet, placeholder screen).
+
 ## Verifying tenancy
 
 ```bash

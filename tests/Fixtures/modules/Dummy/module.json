@@ -13,7 +13,7 @@
         "provides": ["dummy.items"],
         "hooks": {"emits": []},
         "permissions": [],
-        "frontend": {"entry": null, "remote": null},
+        "frontend": {"entry": "resources/js/index.ts", "remote": null},
         "platform": "^1.0",
         "defaultEnabled": false
     }

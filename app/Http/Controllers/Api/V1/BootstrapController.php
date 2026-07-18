@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Foundation\Frontend\GeneratedModuleRegistry;
 use App\Foundation\Modules\ModuleRegistry;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
@@ -13,12 +14,15 @@ use Illuminate\Http\Request;
 /**
  * SPA boot payload (CLAUDE.md §7), wrapped in `data` like every other endpoint.
  * Stubs fill in later: companies/current_company_id/settings (Phase 5 zenon/core),
- * registryHash (Phase 4 zenon:frontend:generate), remote_modules (Phase 7).
+ * remote_modules (Phase 7).
  */
 class BootstrapController extends Controller
 {
-    public function __invoke(Request $request, ModuleRegistry $registry): JsonResponse
-    {
+    public function __invoke(
+        Request $request,
+        ModuleRegistry $registry,
+        GeneratedModuleRegistry $generatedRegistry,
+    ): JsonResponse {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
@@ -39,7 +43,7 @@ class BootstrapController extends Controller
                 'permissions' => $user->getAllPermissions()->pluck('name')->sort()->values()->all(),
                 'settings' => (object) [],
                 'locale' => (string) config('app.locale'),
-                'registryHash' => null,
+                'registryHash' => $generatedRegistry->hash(),
             ],
         ]);
     }

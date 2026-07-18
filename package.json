@@ -3,14 +3,39 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "dev": "vite",
         "build": "vite build",
-        "dev": "vite"
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint ."
+    },
+    "dependencies": {
+        "@base-ui/react": "1.6.0",
+        "@tanstack/react-query": "5.101.2",
+        "@tanstack/react-router": "1.170.18",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "i18next": "26.3.6",
+        "react": "19.2.7",
+        "react-dom": "19.2.7",
+        "react-i18next": "17.0.10",
+        "tailwind-merge": "^3.6.0",
+        "zustand": "5.0.14"
     },
     "devDependencies": {
-        "@tailwindcss/vite": "^4.0.0",
+        "@eslint/js": "^9",
+        "@module-federation/vite": "1.18.2",
+        "@tailwindcss/vite": "4.3.3",
+        "@types/react": "^19.2",
+        "@types/react-dom": "^19.2",
+        "@vitejs/plugin-react": "6.0.3",
         "concurrently": "^9.0.1",
-        "laravel-vite-plugin": "^3.1",
-        "tailwindcss": "^4.0.0",
-        "vite": "^8.0.0"
+        "eslint": "^9",
+        "eslint-plugin-react-hooks": "^6",
+        "globals": "^16",
+        "laravel-vite-plugin": "3.1.3",
+        "tailwindcss": "4.3.3",
+        "typescript": "6.0.3",
+        "typescript-eslint": "^8",
+        "vite": "8.1.5"
     }
 }

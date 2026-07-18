@@ -21,6 +21,9 @@
 /storage/*.key
 /storage/pail
 /vendor
+# Derived boot artifact (CLAUDE.md §5) — mirrors the central `modules` table, regenerated
+# by ModuleManager on install/uninstall; never hand-edited or committed.
+/modules_statuses.json
 _ide_helper.php
 Homestead.json
 Homestead.yaml

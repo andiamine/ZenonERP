@@ -10,11 +10,19 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Modules\Core\Contracts\Companies\CompanyDirectory;
+use Modules\Core\Contracts\Settings\SettingsReader;
 
 /**
  * SPA boot payload (CLAUDE.md §7), wrapped in `data` like every other endpoint.
- * Stubs fill in later: companies/current_company_id/settings (Phase 5 zenon/core),
- * remote_modules (Phase 7).
+ * remote_modules fills in later (Phase 7).
+ *
+ * companies/current_company_id/settings only import from Modules\Core\Contracts\* — the
+ * one place the host app is allowed to reach into a module (CLAUDE.md §2 arch rule: never
+ * Models/Services). Gated on the kernel module (config('zenon.kernel_module', 'core'))
+ * being enabled for the tenant AND its CompanyDirectory binding actually being present —
+ * both false for any core-less tenant, which is why the stub values below are the
+ * correct answer in that case, not a placeholder.
  */
 class BootstrapController extends Controller
 {
@@ -29,6 +37,18 @@ class BootstrapController extends Controller
         $tenant = tenant();
         abort_unless($tenant instanceof Tenant, 500); // unreachable: tenant-api group guarantees context
 
+        $companies = [];
+        $currentCompanyId = null;
+        $settings = (object) [];
+
+        if ($registry->isEnabledForCurrentTenant(config('zenon.kernel_module', 'core'))
+            && app()->bound(CompanyDirectory::class)) {
+            $directory = app(CompanyDirectory::class);
+            $companies = array_map(fn ($c) => $c->toArray(), $directory->companiesFor($user));
+            $currentCompanyId = $directory->defaultCompanyIdFor($user);
+            $settings = (object) app(SettingsReader::class)->all($currentCompanyId);
+        }
+
         return response()->json([
             'data' => [
                 'user' => UserResource::make($user),
@@ -36,12 +56,14 @@ class BootstrapController extends Controller
                     'id' => $tenant->getTenantKey(),
                     'name' => $tenant->name,
                 ],
-                'companies' => [],
-                'current_company_id' => null,
+                'companies' => $companies,
+                'current_company_id' => $currentCompanyId,
                 'enabled_modules' => $registry->enabledFor($tenant),
                 'remote_modules' => [],
-                'permissions' => $user->getAllPermissions()->pluck('name')->sort()->values()->all(),
-                'settings' => (object) [],
+                'permissions' => $user->hasRole('admin')
+                    ? ['*']
+                    : $user->getAllPermissions()->pluck('name')->sort()->values()->all(),
+                'settings' => $settings,
                 'locale' => (string) config('app.locale'),
                 'registryHash' => $generatedRegistry->hash(),
             ],

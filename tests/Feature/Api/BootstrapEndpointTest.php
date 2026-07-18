@@ -1,6 +1,7 @@
 <?php
 
 use App\Foundation\Frontend\GeneratedModuleRegistry;
+use Modules\Core\Models\Company;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -56,4 +57,58 @@ it('requires authentication', function () {
     $response = statefulJson('get', 'acme.zenonerp.test', '/api/v1/bootstrap');
 
     assertErrorEnvelope($response, 401, 'unauthenticated');
+});
+
+it('fills companies/current_company_id/settings and gives an admin user permissions: [*] on a core-enabled tenant', function () {
+    $tenant = createTenant('acme');
+    installModule('core');
+    enableModule('core', $tenant);
+
+    $admin = tenantUser($tenant, ['email' => 'admin@acme.test']);
+    $company = $tenant->run(function () use ($admin) {
+        $company = Company::query()->where('is_default', true)->firstOrFail();
+        $company->users()->attach($admin);
+        $admin->assignRole('admin'); // seeded by CoreDatabaseSeeder
+
+        return $company;
+    });
+
+    [, $cookie] = loginOn('acme.zenonerp.test', 'admin@acme.test');
+
+    statefulJson('get', 'acme.zenonerp.test', '/api/v1/bootstrap', [], $cookie)
+        ->assertOk()
+        ->assertJsonPath('data.companies', [[
+            'id' => $company->id,
+            'name' => $company->name,
+            'code' => $company->code,
+            'currency_code' => $company->currency_code,
+            'is_default' => true,
+        ]])
+        ->assertJsonPath('data.current_company_id', $company->id)
+        ->assertJsonPath('data.settings', [
+            'core.default_currency' => 'USD',
+            'core.date_format' => 'Y-m-d',
+            'core.timezone' => 'UTC',
+            'core.fiscal_year_start_month' => 1,
+        ])
+        ->assertJsonPath('data.permissions', ['*']);
+});
+
+it('gives a non-admin core-enabled user their real, sorted permission names', function () {
+    $tenant = createTenant('acme');
+    installModule('core');
+    enableModule('core', $tenant);
+
+    $user = tenantUser($tenant, ['email' => 'user@acme.test']);
+    $tenant->run(function () use ($user) {
+        Company::query()->where('is_default', true)->firstOrFail()->users()->attach($user);
+        $user->givePermissionTo(['core.settings.view', 'core.companies.view']);
+    });
+
+    [, $cookie] = loginOn('acme.zenonerp.test', 'user@acme.test');
+
+    statefulJson('get', 'acme.zenonerp.test', '/api/v1/bootstrap', [], $cookie)
+        ->assertOk()
+        ->assertJsonPath('data.permissions', ['core.companies.view', 'core.settings.view'])
+        ->assertJsonPath('data.current_company_id', fn ($id) => is_int($id));
 });

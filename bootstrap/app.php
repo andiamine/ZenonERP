@@ -69,6 +69,17 @@ return Application::configure(basePath: dirname(__DIR__))
         // copied from Illuminate\Foundation\Http\Kernel::$middlewarePriority, with
         // SetCurrentCompany (§8) inserted immediately after AuthenticatesRequests — it must
         // sort after route-level `auth:sanctum` so it sees the authenticated user.
+        //
+        // EnsureModuleEnabled (§5/§6 risk #1: "a disabled module must be behaviorally
+        // invisible") is ALSO listed here, right after tenancy init and before Sanctum's
+        // stateful/session/auth chain — without this it's unlisted, and Laravel's
+        // SortedMiddleware only reorders middleware that ARE in the priority map relative to
+        // each other, so an unlisted module.enabled gets dragged wherever AuthenticatesRequests
+        // (auth:sanctum, matched via its AuthenticatesRequests interface) happens to land —
+        // observed as a disabled Core route 401ing (auth ran first) instead of 404ing.
+        // EnsureModuleEnabled only needs tenant() resolved, never auth/session state, so
+        // running it first is always safe and makes a disabled module 404 before the
+        // request even touches sessions or authentication.
         $middleware->priority([
             PreventAccessFromCentralDomains::class,
             InitializeTenancyByDomain::class,
@@ -77,6 +88,7 @@ return Application::configure(basePath: dirname(__DIR__))
             InitializeTenancyByPath::class,
             InitializeTenancyByRequestData::class,
             InitializeTenancyOnTenantHosts::class,
+            EnsureModuleEnabled::class,
             EnsureFrontendRequestsAreStateful::class,
             HandlePrecognitiveRequests::class,
             EncryptCookies::class,

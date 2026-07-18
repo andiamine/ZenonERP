@@ -132,6 +132,15 @@ it('passes through with CurrentCompany null when no CompanyResolver is bound', f
     tenantUser($acme, ['email' => 'user@acme.test']);
     // Deliberately no bindFakeCompanyResolver() call.
 
+    // Since Task 5, zenon/core is globally active for the whole test suite (real modules'
+    // providers register on every boot, mirroring production — CLAUDE.md §5) and its
+    // CoreServiceProvider unconditionally binds CompanyResolver. Force the binding off to
+    // exercise this defensive branch in isolation: SetCurrentCompany still gates on
+    // `zenon.kernel_module` being enabled for the CURRENT tenant (the dummycore fixture
+    // here, not core), so this scenario remains reachable in principle (e.g. a
+    // misconfigured kernel_module pointing at a module that never binds the port).
+    app()->offsetUnset(CompanyResolver::class);
+
     [, $cookie] = loginOn('acme.zenonerp.test', 'user@acme.test');
 
     statefulJson('get', 'acme.zenonerp.test', '/api/v1/_test/company', [], $cookie, ['X-Company-Id' => '2'])

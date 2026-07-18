@@ -11,6 +11,11 @@ final class CreateTeam
      */
     public function handle(array $data): Team
     {
-        return Team::query()->create($data);
+        $team = Team::query()->create($data);
+
+        // See CreateCompany's docblock: `active` is optional on the request, so an
+        // omitted value only gets the schema DEFAULT at the DB layer — refresh so the
+        // returned model (and TeamResource) reflects it, not null.
+        return $team->refresh();
     }
 }

@@ -7,3 +7,9 @@ parameters:
         - app
         - modules/zenon
         - tests/Fixtures
+    excludePaths:
+        # Module Pest suites (CLAUDE.md §11: Larastan covers app/** + modules/zenon/**
+        # PRODUCTION code) call global helpers defined in tests/Pest.php (createTenant,
+        # installModule, statefulJson, …) — not statically visible to PHPStan, same
+        # reason the root tests/ tree was never in `paths` above.
+        - modules/zenon/*/tests/*

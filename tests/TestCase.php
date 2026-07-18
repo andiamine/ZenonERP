@@ -75,6 +75,9 @@ abstract class TestCase extends BaseTestCase
             'Dummy' => true,     // activator keys = nwidart module NAMES, not aliases
             'DummyDep' => true,
             'DummyCore' => true,
+            'Core' => true,      // zenon/core (Task 5+) — Sequence/Audit join once Tasks 6/7 land
+            'Sequence' => true,  // not on disk yet: harmless extra key, FileActivator::hasStatus()
+            'Audit' => true,     // only looks up statuses for modules it actually discovers on disk
         ], JSON_PRETTY_PRINT));
     }
 }

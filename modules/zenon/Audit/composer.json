@@ -1,0 +1,10 @@
+{
+  "name": "zenon/audit",
+  "description": "ZenonERP audit (activity log) module.",
+  "type": "library",
+  "autoload": {
+    "psr-4": {
+      "Modules\\Audit\\": "app/"
+    }
+  }
+}

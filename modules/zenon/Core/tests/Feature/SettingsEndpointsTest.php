@@ -10,14 +10,20 @@ it('returns the effective settings map with registered defaults', function () {
 
     [, $cookie] = loginOn('acme.zenonerp.test', 'user@acme.test');
 
-    statefulJson('get', 'acme.zenonerp.test', '/api/v1/core/settings', [], $cookie)
-        ->assertOk()
-        ->assertJsonPath('data', [
-            'core.default_currency' => 'USD',
-            'core.date_format' => 'Y-m-d',
-            'core.timezone' => 'UTC',
-            'core.fiscal_year_start_month' => 1,
-        ]);
+    $response = statefulJson('get', 'acme.zenonerp.test', '/api/v1/core/settings', [], $cookie)
+        ->assertOk();
+
+    // Subset, not exact-equality: OTHER installed (platform-wide) modules may also
+    // register settings into the same shared registry regardless of whether they are
+    // ENABLED for this tenant — definitions are platform-wide like routes, not
+    // tenant-gated (CLAUDE.md §1/§5; zenon/audit's audit.retention_days is the first
+    // example, Task 7). This test only owns the four core.* settings' resolution.
+    expect($response->json('data'))->toMatchArray([
+        'core.default_currency' => 'USD',
+        'core.date_format' => 'Y-m-d',
+        'core.timezone' => 'UTC',
+        'core.fiscal_year_start_month' => 1,
+    ]);
 });
 
 it('lists the four core setting definitions with key/type/default/label', function () {
@@ -27,15 +33,22 @@ it('lists the four core setting definitions with key/type/default/label', functi
 
     [, $cookie] = loginOn('acme.zenonerp.test', 'user@acme.test');
 
-    statefulJson('get', 'acme.zenonerp.test', '/api/v1/core/settings/definitions', [], $cookie)
-        ->assertOk()
-        ->assertJsonCount(4, 'data')
-        ->assertJsonPath('data', [
-            ['key' => 'core.default_currency', 'type' => 'string', 'default' => 'USD', 'label' => null],
-            ['key' => 'core.date_format', 'type' => 'string', 'default' => 'Y-m-d', 'label' => null],
-            ['key' => 'core.timezone', 'type' => 'string', 'default' => 'UTC', 'label' => null],
-            ['key' => 'core.fiscal_year_start_month', 'type' => 'int', 'default' => 1, 'label' => null],
-        ]);
+    $definitions = collect(
+        statefulJson('get', 'acme.zenonerp.test', '/api/v1/core/settings/definitions', [], $cookie)
+            ->assertOk()
+            ->json('data'),
+    );
+
+    // Presence check per key, not exact-list-equality: other installed modules may
+    // contribute their own definitions to this same endpoint (see note above).
+    foreach ([
+        ['key' => 'core.default_currency', 'type' => 'string', 'default' => 'USD', 'label' => null],
+        ['key' => 'core.date_format', 'type' => 'string', 'default' => 'Y-m-d', 'label' => null],
+        ['key' => 'core.timezone', 'type' => 'string', 'default' => 'UTC', 'label' => null],
+        ['key' => 'core.fiscal_year_start_month', 'type' => 'int', 'default' => 1, 'label' => null],
+    ] as $expected) {
+        expect($definitions->firstWhere('key', $expected['key']))->toBe($expected);
+    }
 });
 
 /**

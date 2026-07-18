@@ -1,0 +1,12 @@
+{
+  "name": "zenon/core",
+  "description": "ZenonERP kernel module.",
+  "type": "library",
+  "autoload": {
+    "psr-4": {
+      "Modules\\Core\\": "app/",
+      "Modules\\Core\\Database\\Seeders\\": "database/seeders/",
+      "Modules\\Core\\Database\\Factories\\": "database/factories/"
+    }
+  }
+}

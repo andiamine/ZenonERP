@@ -1,0 +1,25 @@
+{
+  "name": "Core",
+  "alias": "core",
+  "description": "Kernel: companies, typed settings, currencies, users/roles/teams.",
+  "providers": ["Modules\\Core\\Providers\\CoreServiceProvider"],
+  "zenon": {
+    "id": "zenon/core",
+    "version": "1.0.0",
+    "core": true,
+    "requires": {},
+    "provides": ["core.companies", "core.settings", "core.currencies", "core.users", "core.roles", "core.teams"],
+    "hooks": { "emits": [] },
+    "permissions": [
+      "core.companies.view", "core.companies.create", "core.companies.update", "core.companies.delete",
+      "core.settings.view", "core.settings.update",
+      "core.currencies.view", "core.currencies.create", "core.currencies.update", "core.currencies.delete",
+      "core.users.view", "core.users.create", "core.users.update", "core.users.delete",
+      "core.roles.view", "core.roles.create", "core.roles.update", "core.roles.delete", "core.roles.assign",
+      "core.teams.view", "core.teams.create", "core.teams.update", "core.teams.delete"
+    ],
+    "frontend": { "entry": "resources/js/index.ts", "remote": null },
+    "platform": "^1.0",
+    "defaultEnabled": false
+  }
+}

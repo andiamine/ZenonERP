@@ -17,10 +17,13 @@ foreach ($modules as $from) {
             continue;
         }
 
+        // Trailing backslash: pest-arch's ignoring() is a raw str_starts_with prefix
+        // match — without it, a hypothetical sibling class named e.g.
+        // "Modules\{$to}\ContractsSomething" would also be (wrongly) excluded.
         arch("Modules\\{$from} only reaches Modules\\{$to} through its Contracts namespace")
             ->expect("Modules\\{$from}")
             ->not->toUse("Modules\\{$to}")
-            ->ignoring("Modules\\{$to}\\Contracts");
+            ->ignoring("Modules\\{$to}\\Contracts\\");
     }
 }
 
@@ -32,7 +35,7 @@ arch('App reaches modules only through their Contracts namespace')
     ->expect('App')
     ->not->toUse('Modules')
     ->ignoring([
-        'Modules\Core\Contracts',
-        'Modules\Sequence\Contracts',
-        'Modules\Audit\Contracts',
+        'Modules\Core\Contracts\\',
+        'Modules\Sequence\Contracts\\',
+        'Modules\Audit\Contracts\\',
     ]);

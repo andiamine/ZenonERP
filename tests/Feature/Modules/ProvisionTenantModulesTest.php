@@ -3,6 +3,7 @@
 use App\Foundation\Modules\Events\ModuleEnabledForTenant;
 use App\Foundation\Modules\Models\TenantModule;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 it('auto-enables installed core modules for newly created tenants', function () {
@@ -65,4 +66,32 @@ it('provisions core, sequence, and audit in topological order for a fresh tenant
 
     expect(TenantModule::query()->where('tenant_id', 'acme')->where('enabled', true)->pluck('module')->sort()->values()->all())
         ->toBe(['audit', 'core', 'sequence']);
+});
+
+/**
+ * Regression for the drift-visibility fix: a default_modules alias can be human-edited
+ * config that outruns deployed reality (unlike core-ness, which is read FROM the
+ * installed set and so has no failure mode). Provisioning must stay tolerant — the
+ * tenant is still created and the module simply isn't enabled — but the drift must be
+ * loud, not silent.
+ */
+it('skips a default_modules alias that is not installed, still succeeds, and logs a warning naming tenant + alias', function () {
+    installModule('dummycore'); // core:true — auto-enabled regardless of defaults
+    config(['zenon.default_modules' => ['dummydep']]); // never installed in this test
+
+    Log::spy();
+
+    $acme = createTenant('acme');
+
+    expect(TenantModule::query()->where('tenant_id', 'acme')->where('module', 'dummycore')->where('enabled', true)->exists())
+        ->toBeTrue()
+        ->and(TenantModule::query()->where('tenant_id', 'acme')->where('module', 'dummydep')->exists())
+        ->toBeFalse();
+
+    Log::shouldHaveReceived('warning')
+        ->once()
+        ->with('tenant.provisioning.default_module_skipped', [
+            'tenant' => 'acme',
+            'skipped' => ['dummydep'],
+        ]);
 });

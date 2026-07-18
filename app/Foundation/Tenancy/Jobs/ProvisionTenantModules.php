@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Runs at the end of the TenantCreated pipeline (after CreateDatabase + the platform's
@@ -33,14 +34,27 @@ class ProvisionTenantModules implements ShouldQueue
         $defaults = config('zenon.default_modules', []);
 
         $installed = $registry->installed();
+        $installedAliases = array_keys($installed);
+
+        // A default alias that isn't installed yet is skipped, not fatal — mirrors the
+        // "installed ∩ core" filter below and keeps provisioning tolerant of a config
+        // declaring a module before its code is deployed. Unlike core-ness (read FROM
+        // $installed, so it has no failure mode), default_modules is independent
+        // human-edited config that can drift from deployed reality — that drift must
+        // stay visible, hence the warning below.
+        $skipped = array_values(array_diff($defaults, $installedAliases));
+
+        if ($skipped !== []) {
+            Log::warning('tenant.provisioning.default_module_skipped', [
+                'tenant' => (string) $this->tenant->getTenantKey(),
+                'skipped' => $skipped,
+            ]);
+        }
 
         $aliases = collect($installed)
             ->filter(fn (ManifestData $manifest) => $manifest->core)
             ->keys()
-            // A default alias that isn't installed yet is skipped, not fatal — mirrors
-            // the "installed ∩ core" filter above and keeps provisioning tolerant of a
-            // config declaring a module before its code is deployed.
-            ->merge(array_values(array_intersect($defaults, array_keys($installed))))
+            ->merge(array_values(array_intersect($defaults, $installedAliases)))
             ->unique()
             ->values();
 

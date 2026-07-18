@@ -4,6 +4,7 @@ namespace Modules\Core\Http\Controllers\Api\V1;
 
 use App\Foundation\Api\ApiController;
 use App\Foundation\Company\CurrentCompany;
+use App\Foundation\Modules\ModuleRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 use Modules\Core\Actions\PutSettings;
@@ -21,7 +22,12 @@ class SettingsController extends ApiController
         return response()->json(['data' => $reader->all($currentCompany->id())]);
     }
 
-    public function definitions(SettingsRegistrar $registrar): JsonResponse
+    /**
+     * Same gate as SettingsRepository (CLAUDE.md §6/§13 risk #1): a definition owned by a
+     * module disabled for the current tenant is invisible here too, not just in the
+     * effective values map.
+     */
+    public function definitions(SettingsRegistrar $registrar, ModuleRegistry $modules): JsonResponse
     {
         $definitions = array_values(array_map(
             static fn (SettingDefinition $definition): array => [
@@ -30,7 +36,11 @@ class SettingsController extends ApiController
                 'default' => $definition->default,
                 'label' => $definition->label,
             ],
-            $registrar->definitions(),
+            array_filter(
+                $registrar->definitions(),
+                static fn (SettingDefinition $definition): bool => $definition->module === null
+                    || $modules->isEnabledForCurrentTenant($definition->module),
+            ),
         ));
 
         return response()->json(['data' => $definitions]);

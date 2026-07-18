@@ -10,20 +10,14 @@ it('returns the effective settings map with registered defaults', function () {
 
     [, $cookie] = loginOn('acme.zenonerp.test', 'user@acme.test');
 
-    $response = statefulJson('get', 'acme.zenonerp.test', '/api/v1/core/settings', [], $cookie)
-        ->assertOk();
-
-    // Subset, not exact-equality: OTHER installed (platform-wide) modules may also
-    // register settings into the same shared registry regardless of whether they are
-    // ENABLED for this tenant — definitions are platform-wide like routes, not
-    // tenant-gated (CLAUDE.md §1/§5; zenon/audit's audit.retention_days is the first
-    // example, Task 7). This test only owns the four core.* settings' resolution.
-    expect($response->json('data'))->toMatchArray([
-        'core.default_currency' => 'USD',
-        'core.date_format' => 'Y-m-d',
-        'core.timezone' => 'UTC',
-        'core.fiscal_year_start_month' => 1,
-    ]);
+    statefulJson('get', 'acme.zenonerp.test', '/api/v1/core/settings', [], $cookie)
+        ->assertOk()
+        ->assertJsonPath('data', [
+            'core.default_currency' => 'USD',
+            'core.date_format' => 'Y-m-d',
+            'core.timezone' => 'UTC',
+            'core.fiscal_year_start_month' => 1,
+        ]);
 });
 
 it('lists the four core setting definitions with key/type/default/label', function () {
@@ -33,22 +27,75 @@ it('lists the four core setting definitions with key/type/default/label', functi
 
     [, $cookie] = loginOn('acme.zenonerp.test', 'user@acme.test');
 
+    statefulJson('get', 'acme.zenonerp.test', '/api/v1/core/settings/definitions', [], $cookie)
+        ->assertOk()
+        ->assertJsonCount(4, 'data')
+        ->assertJsonPath('data', [
+            ['key' => 'core.default_currency', 'type' => 'string', 'default' => 'USD', 'label' => null],
+            ['key' => 'core.date_format', 'type' => 'string', 'default' => 'Y-m-d', 'label' => null],
+            ['key' => 'core.timezone', 'type' => 'string', 'default' => 'UTC', 'label' => null],
+            ['key' => 'core.fiscal_year_start_month', 'type' => 'int', 'default' => 1, 'label' => null],
+        ]);
+});
+
+/**
+ * Controller-directed fix (audit module task, follow-up): CLAUDE.md §6/§13 risk #1 — a
+ * disabled module's setting must be behaviorally invisible, not merely absent from the
+ * SPA menu. Definitions register platform-wide (every installed module's provider boots
+ * regardless of tenant enablement — same as routes always registering, §5), but
+ * SettingDefinition::$module gates the READ/WRITE path: SettingsRepository::get()/all()/
+ * set() and SettingsController::definitions() all consult
+ * ModuleRegistry::isEnabledForCurrentTenant($definition->module).
+ */
+it('hides a gated setting owned by a disabled module and reveals it once that module is enabled', function () {
+    $tenant = bootCoreTenant();
+    $user = tenantUser($tenant, ['email' => 'user@acme.test']);
+    $tenant->run(fn () => $user->givePermissionTo(['core.settings.view', 'core.settings.update']));
+
+    installModule('audit'); // installed platform-wide, NOT enabled for this tenant yet
+
+    [, $cookie] = loginOn('acme.zenonerp.test', 'user@acme.test');
+
+    // audit disabled → invisible on BOTH endpoints, and a write is rejected as unknown
+    // (invisible means invisible — the caller cannot distinguish "never registered" from
+    // "registered by a module disabled for this tenant").
+    $settings = statefulJson('get', 'acme.zenonerp.test', '/api/v1/core/settings', [], $cookie)
+        ->assertOk()->json('data');
+    expect(array_key_exists('audit.retention_days', $settings))->toBeFalse();
+
     $definitions = collect(
         statefulJson('get', 'acme.zenonerp.test', '/api/v1/core/settings/definitions', [], $cookie)
-            ->assertOk()
-            ->json('data'),
+            ->assertOk()->json('data'),
     );
+    expect($definitions->firstWhere('key', 'audit.retention_days'))->toBeNull();
 
-    // Presence check per key, not exact-list-equality: other installed modules may
-    // contribute their own definitions to this same endpoint (see note above).
-    foreach ([
-        ['key' => 'core.default_currency', 'type' => 'string', 'default' => 'USD', 'label' => null],
-        ['key' => 'core.date_format', 'type' => 'string', 'default' => 'Y-m-d', 'label' => null],
-        ['key' => 'core.timezone', 'type' => 'string', 'default' => 'UTC', 'label' => null],
-        ['key' => 'core.fiscal_year_start_month', 'type' => 'int', 'default' => 1, 'label' => null],
-    ] as $expected) {
-        expect($definitions->firstWhere('key', $expected['key']))->toBe($expected);
-    }
+    $rejected = statefulJson('put', 'acme.zenonerp.test', '/api/v1/core/settings', [
+        'values' => ['audit.retention_days' => 30],
+    ], $cookie);
+    assertErrorEnvelope($rejected, 422, 'validation_error');
+    expect(array_key_exists('values.audit.retention_days', $rejected->json('error.errors')))->toBeTrue();
+
+    // Enable audit → the setting appears with its registered default, and is now writable.
+    enableModule('audit', $tenant);
+
+    $settings = statefulJson('get', 'acme.zenonerp.test', '/api/v1/core/settings', [], $cookie)
+        ->assertOk()->json('data');
+    expect($settings['audit.retention_days'])->toBe(365);
+
+    $definitions = collect(
+        statefulJson('get', 'acme.zenonerp.test', '/api/v1/core/settings/definitions', [], $cookie)
+            ->assertOk()->json('data'),
+    );
+    expect($definitions->firstWhere('key', 'audit.retention_days'))->toBe([
+        'key' => 'audit.retention_days', 'type' => 'int', 'default' => 365,
+        'label' => 'Audit log retention (days)',
+    ]);
+
+    statefulJson('put', 'acme.zenonerp.test', '/api/v1/core/settings', [
+        'values' => ['audit.retention_days' => 30],
+    ], $cookie)
+        ->assertOk()
+        ->tap(fn ($response) => expect($response->json('data')['audit.retention_days'])->toBe(30));
 });
 
 /**

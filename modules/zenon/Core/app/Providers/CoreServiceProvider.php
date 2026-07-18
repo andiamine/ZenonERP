@@ -47,10 +47,10 @@ class CoreServiceProvider extends ModuleServiceProvider
         $registrar = $this->app->make(SettingsRegistrar::class);
 
         $registrar->register(
-            new SettingDefinition('core.default_currency', 'string', 'USD'),
-            new SettingDefinition('core.date_format', 'string', 'Y-m-d'),
-            new SettingDefinition('core.timezone', 'string', 'UTC'),
-            new SettingDefinition('core.fiscal_year_start_month', 'int', 1),
+            new SettingDefinition('core.default_currency', 'string', 'USD', module: 'core'),
+            new SettingDefinition('core.date_format', 'string', 'Y-m-d', module: 'core'),
+            new SettingDefinition('core.timezone', 'string', 'UTC', module: 'core'),
+            new SettingDefinition('core.fiscal_year_start_month', 'int', 1, module: 'core'),
         );
 
         // Admin super-user (spatie-recommended pattern): `null` falls through to normal

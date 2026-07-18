@@ -2,8 +2,10 @@
 
 namespace Modules\Core\Services;
 
+use App\Foundation\Modules\ModuleRegistry;
 use Modules\Core\Contracts\Settings\Exceptions\InvalidSettingValueException;
 use Modules\Core\Contracts\Settings\Exceptions\UnknownSettingException;
+use Modules\Core\Contracts\Settings\SettingDefinition;
 use Modules\Core\Contracts\Settings\SettingsRegistrar;
 use Modules\Core\Contracts\Settings\SettingsRepository as SettingsRepositoryContract;
 use Modules\Core\Models\Setting;
@@ -11,13 +13,28 @@ use Modules\Core\Models\Setting;
 /**
  * Reads resolve company-override ← tenant-level ← registered-default explicitly
  * (CLAUDE.md §9.1) — see Models\Setting's docblock for why this can't be a global scope.
+ *
+ * Definitions are registered platform-wide (every installed module's provider boots
+ * regardless of tenant enablement, CLAUDE.md §5 — same as routes always registering), but
+ * a definition tagged with an owning `module` is gated at the READ/WRITE path here, the
+ * same way EnsureModuleEnabled gates routes (CLAUDE.md §6/§13 risk #1: disabled must be
+ * behaviorally invisible, not just hidden from the menu — that includes settings).
  */
 final class SettingsRepository implements SettingsRepositoryContract
 {
-    public function __construct(private readonly SettingsRegistrar $registrar) {}
+    public function __construct(
+        private readonly SettingsRegistrar $registrar,
+        private readonly ModuleRegistry $modules,
+    ) {}
 
     public function get(string $key, ?int $companyId = null): mixed
     {
+        $definition = $this->registrar->definitions()[$key] ?? null;
+
+        if ($definition !== null && ! $this->isVisible($definition)) {
+            return null;
+        }
+
         if ($companyId !== null) {
             $companyRow = Setting::query()->where('company_id', $companyId)->where('key', $key)->first();
 
@@ -32,7 +49,7 @@ final class SettingsRepository implements SettingsRepositoryContract
             return $tenantRow->value;
         }
 
-        return $this->registrar->definitions()[$key]->default ?? null;
+        return $definition?->default;
     }
 
     /**
@@ -43,16 +60,22 @@ final class SettingsRepository implements SettingsRepositoryContract
         $merged = [];
 
         foreach ($this->registrar->definitions() as $key => $definition) {
-            $merged[$key] = $definition->default;
+            if ($this->isVisible($definition)) {
+                $merged[$key] = $definition->default;
+            }
         }
 
         foreach (Setting::query()->whereNull('company_id')->get(['key', 'value']) as $row) {
-            $merged[$row->key] = $row->value;
+            if (array_key_exists($row->key, $merged)) {
+                $merged[$row->key] = $row->value;
+            }
         }
 
         if ($companyId !== null) {
             foreach (Setting::query()->where('company_id', $companyId)->get(['key', 'value']) as $row) {
-                $merged[$row->key] = $row->value;
+                if (array_key_exists($row->key, $merged)) {
+                    $merged[$row->key] = $row->value;
+                }
             }
         }
 
@@ -63,7 +86,10 @@ final class SettingsRepository implements SettingsRepositoryContract
     {
         $definition = $this->registrar->definitions()[$key] ?? null;
 
-        if ($definition === null) {
+        if ($definition === null || ! $this->isVisible($definition)) {
+            // Invisible means invisible: a gated-off key behaves exactly like an unknown
+            // one — the caller cannot distinguish "never registered" from "registered by
+            // a module disabled for this tenant" (CLAUDE.md §13 risk #1).
             throw UnknownSettingException::forKey($key);
         }
 
@@ -89,5 +115,10 @@ final class SettingsRepository implements SettingsRepositoryContract
     public function forget(string $key, ?int $companyId = null): void
     {
         Setting::query()->where('company_id', $companyId)->where('key', $key)->delete();
+    }
+
+    private function isVisible(SettingDefinition $definition): bool
+    {
+        return $definition->module === null || $this->modules->isEnabledForCurrentTenant($definition->module);
     }
 }

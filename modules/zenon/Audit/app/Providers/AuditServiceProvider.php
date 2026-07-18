@@ -25,8 +25,12 @@ class AuditServiceProvider extends ModuleServiceProvider
 
         // Dogfoods cross-module typed settings (CLAUDE.md §9.1): Contracts-only import
         // from Core, registered every boot into the request-scoped SettingsRegistry.
+        // module: 'audit' gates the READ/WRITE path (SettingsRepository) so this
+        // definition — and any stored value — is invisible for a tenant where zenon/audit
+        // isn't enabled, even though registration itself is platform-wide like routes
+        // (CLAUDE.md §6/§13 risk #1; controller-directed fix, see task report).
         $this->app->make(SettingsRegistrar::class)->register(
-            new SettingDefinition('audit.retention_days', 'int', 365, 'Audit log retention (days)'),
+            new SettingDefinition('audit.retention_days', 'int', 365, 'Audit log retention (days)', module: 'audit'),
         );
     }
 

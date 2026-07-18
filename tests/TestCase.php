@@ -50,6 +50,18 @@ abstract class TestCase extends BaseTestCase
         }
     }
 
+    /**
+     * withCredentials/withUnencryptedCookie state is sticky across requests within one
+     * test — reset it so each statefulJson() call is self-contained (a request without
+     * a cookie must not silently replay the previous one).
+     */
+    public function flushCookieState(): void
+    {
+        $this->defaultCookies = [];
+        $this->unencryptedCookies = [];
+        $this->withCredentials = false;
+    }
+
     /** Resets the testing nwidart statuses file to "all fixture modules active". */
     public static function writeFixtureModuleStatuses(): void
     {

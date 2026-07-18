@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CentralUser;
 use App\Models\User;
 
 return [
@@ -38,9 +39,19 @@ return [
     */
 
     'guards' => [
+        // Tenant users — the `users` table of whichever tenant DB is the current
+        // default connection. Sanctum's SPA guard falls back to this one.
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+        ],
+
+        // Platform operators — central `users` table (CentralUser pins the connection).
+        // Distinct session key (login_central_*) + per-DB session storage make
+        // cross-guard cookie replay structurally impossible.
+        'central' => [
+            'driver' => 'session',
+            'provider' => 'central_users',
         ],
     ],
 
@@ -67,10 +78,10 @@ return [
             'model' => env('AUTH_MODEL', User::class),
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'central_users' => [
+            'driver' => 'eloquent',
+            'model' => CentralUser::class,
+        ],
     ],
 
     /*

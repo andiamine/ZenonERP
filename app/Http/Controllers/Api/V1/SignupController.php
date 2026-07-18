@@ -12,7 +12,6 @@ class SignupController extends Controller
 {
     public function __invoke(SignupRequest $request, CreateTenant $createTenant): JsonResponse
     {
-        // TODO(Phase 3): full §8 error envelope via the single exception renderer.
         $tenant = $createTenant->handle(
             subdomain: $request->string('subdomain')->value(),
             name: $request->filled('name') ? $request->string('name')->value() : null,

@@ -32,7 +32,8 @@
         <env name="MODULES_STATUSES_FILE" value="storage/framework/testing/modules_statuses.json"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
-        <env name="SESSION_DRIVER" value="array"/>
+        <env name="SESSION_DRIVER" value="database"/>
+        <env name="SANCTUM_STATEFUL_DOMAINS" value="app.zenonerp.test,*.zenonerp.test"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

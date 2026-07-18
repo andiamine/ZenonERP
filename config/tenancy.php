@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Foundation\Tenancy\Bootstrappers\PermissionCacheTenancyBootstrapper;
 use App\Foundation\Tenancy\Bootstrappers\PrefixCacheTenancyBootstrapper;
+use App\Foundation\Tenancy\Bootstrappers\SessionAuthTenancyBootstrapper;
 use App\Models\Tenant;
 use Stancl\Tenancy\Bootstrappers\DatabaseTenancyBootstrapper;
 use Stancl\Tenancy\Bootstrappers\FilesystemTenancyBootstrapper;
@@ -43,6 +45,12 @@ return [
         // which cannot work with the (non-taggable) `database` cache store. Cache rows stay in the
         // CENTRAL DB via DB_CACHE_CONNECTION; tenants are isolated by key prefix.
         PrefixCacheTenancyBootstrapper::class,
+        // Session handler + auth guards memoize connection/store instances — drop them on
+        // every tenant transition so they rebuild against the current default connection.
+        SessionAuthTenancyBootstrapper::class,
+        // Re-resolves spatie's PermissionRegistrar cache repository under the new prefix.
+        // MUST stay after PrefixCacheTenancyBootstrapper (revert runs in the same order).
+        PermissionCacheTenancyBootstrapper::class,
         FilesystemTenancyBootstrapper::class,
         QueueTenancyBootstrapper::class, // serializes tenant context into queue payloads; jobs table stays central (DB_QUEUE_CONNECTION)
         // Stancl\Tenancy\Bootstrappers\RedisTenancyBootstrapper::class, // Note: phpredis is needed

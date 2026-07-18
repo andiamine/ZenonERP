@@ -3,7 +3,9 @@
 use App\Foundation\Modules\ModuleManager;
 use App\Foundation\Tenancy\Actions\CreateTenant;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)
@@ -37,4 +39,59 @@ function enableModule(string $alias, Tenant $tenant): void
 function assertModuleInvisibleFor(Tenant $tenant, string $probeUri): void
 {
     test()->getJson('http://'.$tenant->getTenantKey().'.zenonerp.test'.$probeUri)->assertNotFound();
+}
+
+/**
+ * Creates a user inside the tenant's DB (factory password: "password").
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function tenantUser(Tenant $tenant, array $attributes = []): User
+{
+    return $tenant->run(fn () => User::factory()->create($attributes));
+}
+
+/**
+ * Same-origin (stateful) JSON request against a host — the Referer header is what makes
+ * Sanctum's EnsureFrontendRequestsAreStateful treat it as a frontend request. Cookie
+ * state is flushed first so every call is self-contained; pass the RAW ENCRYPTED session
+ * cookie (from loginOn) to authenticate. CSRF needs no ceremony: PreventRequestForgery
+ * bypasses entirely under unit tests.
+ *
+ * @param  array<string, mixed>  $data
+ */
+function statefulJson(string $method, string $host, string $uri, array $data = [], ?string $rawSessionCookie = null): TestResponse
+{
+    $test = test();
+    $test->flushCookieState();
+    $test->withHeader('Referer', "http://{$host}");
+
+    if ($rawSessionCookie !== null) {
+        // getJson/postJson only forward cookies when withCredentials() is set.
+        $test->withCredentials()
+            ->withUnencryptedCookie((string) config('session.cookie'), $rawSessionCookie);
+    }
+
+    return $test->{$method.'Json'}("http://{$host}{$uri}", $data);
+}
+
+/**
+ * Logs in on a host and returns [response, raw encrypted session cookie|null].
+ *
+ * @return array{0: TestResponse, 1: string|null}
+ */
+function loginOn(string $host, string $email, string $password = 'password'): array
+{
+    $response = statefulJson('post', $host, '/api/v1/auth/login', ['email' => $email, 'password' => $password]);
+    $cookie = $response->getCookie((string) config('session.cookie'), decrypt: false);
+
+    return [$response, $cookie?->getValue()];
+}
+
+/** Asserts the §8 error envelope shape: { error: { type, message, code, trace_id } }. */
+function assertErrorEnvelope(TestResponse $response, int $status, string $type): TestResponse
+{
+    return $response->assertStatus($status)
+        ->assertJsonPath('error.type', $type)
+        ->assertJsonStructure(['error' => ['type', 'message', 'code', 'trace_id']]);
 }

@@ -9,7 +9,8 @@ class SignupRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // TODO(Phase 3): central-guard auth + signup abuse hardening.
+        // Authentication is the route's auth:central middleware (401 envelope); operator-level
+        // authorization escalation (granular signup permissions) is a later phase.
         return true;
     }
 

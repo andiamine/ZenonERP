@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Auth\LoginController;
+use App\Http\Controllers\Api\V1\Auth\LogoutController;
+use App\Http\Controllers\Api\V1\Auth\MeController;
+use App\Http\Controllers\Api\V1\BootstrapController;
 use App\Http\Controllers\Api\V1\PingController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,4 +18,12 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/v1/ping', PingController::class);
+Route::prefix('/v1')->group(function (): void {
+    Route::get('/ping', PingController::class);
+
+    Route::post('/auth/login', LoginController::class)->middleware('throttle:10,1');
+    Route::post('/auth/logout', LogoutController::class)->middleware('auth:sanctum');
+    Route::get('/auth/me', MeController::class)->middleware('auth:sanctum');
+
+    Route::get('/bootstrap', BootstrapController::class)->middleware('auth:sanctum');
+});

@@ -1,11 +1,31 @@
 <?php
 
+use App\Foundation\Api\ApiExceptionRenderer;
 use App\Foundation\Modules\Middleware\EnsureModuleEnabled;
+use App\Foundation\Tenancy\Middleware\InitializeTenancyOnTenantHosts;
+use Illuminate\Auth\Middleware\Authorize;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
+use Illuminate\Contracts\Session\Middleware\AuthenticatesSessions;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Routing\Middleware\ThrottleRequestsWithRedis;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
+use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
+use Stancl\Tenancy\Middleware\InitializeTenancyByDomainOrSubdomain;
+use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
+use Stancl\Tenancy\Middleware\InitializeTenancyByRequestData;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
@@ -17,7 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function (): void {
             // Tenant API: same 'api' group + /api prefix, plus tenancy middleware.
-            // TenancyServiceProvider sorts PreventAccess → Initialize first via middleware priority.
+            // The explicit priority list below sorts PreventAccess → Initialize first.
             Route::middleware([
                 'api',
                 InitializeTenancyBySubdomain::class,
@@ -26,12 +46,57 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Sanctum SPA cookie mode: prepends EnsureFrontendRequestsAreStateful to the api group.
+        $middleware->statefulApi();
+
+        // Shared web routes (/sanctum/csrf-cookie now, the Phase 4 SPA fallback later) get
+        // tenant context on tenant subdomains before StartSession touches the DB.
+        $middleware->web(prepend: [InitializeTenancyOnTenantHosts::class]);
+
         $middleware->alias([
             'module.enabled' => EnsureModuleEnabled::class,
+            'permission' => PermissionMiddleware::class,
+            'role' => RoleMiddleware::class,
+        ]);
+
+        // EXPLICIT priority list — load-bearing. EnsureFrontendRequestsAreStateful is NOT in
+        // the framework's default $middlewarePriority, so without this it stays at api-group
+        // position 0 and its nested StartSession runs BEFORE tenancy initialization: sessions
+        // would silently land in the CENTRAL DB on tenant hosts. Tenancy classes listed here
+        // also make TenancyServiceProvider's prepends no-ops (in_array-guarded), keeping one
+        // authoritative ordering. Entries below the Sanctum line are the framework defaults
+        // copied from Illuminate\Foundation\Http\Kernel::$middlewarePriority.
+        $middleware->priority([
+            PreventAccessFromCentralDomains::class,
+            InitializeTenancyByDomain::class,
+            InitializeTenancyBySubdomain::class,
+            InitializeTenancyByDomainOrSubdomain::class,
+            InitializeTenancyByPath::class,
+            InitializeTenancyByRequestData::class,
+            InitializeTenancyOnTenantHosts::class,
+            EnsureFrontendRequestsAreStateful::class,
+            HandlePrecognitiveRequests::class,
+            EncryptCookies::class,
+            AddQueuedCookiesToResponse::class,
+            StartSession::class,
+            ShareErrorsFromSession::class,
+            AuthenticatesRequests::class,
+            ThrottleRequests::class,
+            ThrottleRequestsWithRedis::class,
+            AuthenticatesSessions::class,
+            SubstituteBindings::class,
+            Authorize::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
+        );
+
+        // §8 single error envelope renderer — api/* only; web keeps framework defaults.
+        $exceptions->render(
+            fn (Throwable $e, Request $request) => $request->is('api/*')
+                ? ApiExceptionRenderer::render($e, $request)
+                : null,
         );
     })->create();

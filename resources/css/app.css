@@ -39,6 +39,7 @@
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
     --ring: oklch(0.708 0 0);
+    --overlay: oklch(0 0 0 / 0.5);
     --radius: 0.5rem;
 }
 
@@ -68,6 +69,7 @@
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.556 0 0);
+    --overlay: oklch(0 0 0 / 0.7);
 }
 
 @theme inline {
@@ -97,6 +99,7 @@
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
+    --color-overlay: var(--overlay);
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);

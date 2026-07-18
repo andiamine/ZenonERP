@@ -45,6 +45,10 @@ export default tseslint.config(
                             group: ['@base-ui/react', '@base-ui/react/*'],
                             message: 'UI components come only from @zenon/core/ui (CLAUDE.md §2).',
                         },
+                        {
+                            group: ['lucide-react', 'lucide-react/*'],
+                            message: 'Icons come only from @zenon/core/ui (NavIcon/icons registry) (CLAUDE.md §2).',
+                        },
                     ],
                 },
             ],

@@ -2,8 +2,9 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import type { ComponentProps } from 'react';
 import { cn } from './cn';
 
-// v1 ships the two variants the shell needs; the full ReUI variant set
-// (info/success/warning/invert) lands with the Phase 5 token expansion.
+// Phase 5 token expansion: info/success/warning added on the new status tokens (ReUI's
+// real variant names — registry-reui/bases/base/reui/alert.tsx), following the same
+// border/{color}/50 + bg-card + text-{color} pattern already established by `destructive`.
 const alertVariants = cva(
     'relative grid w-full grid-cols-[0_1fr] items-start gap-y-0.5 rounded-lg border border-border px-4 py-3 text-sm has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] has-[>svg]:gap-x-3 [&>svg]:size-4 [&>svg]:translate-y-0.5',
     {
@@ -11,6 +12,9 @@ const alertVariants = cva(
             variant: {
                 default: 'bg-card text-card-foreground',
                 destructive: 'border-destructive/50 bg-card text-destructive [&>svg]:text-destructive',
+                info: 'border-info/50 bg-card text-info [&>svg]:text-info',
+                success: 'border-success/50 bg-card text-success [&>svg]:text-success',
+                warning: 'border-warning/50 bg-card text-warning [&>svg]:text-warning',
             },
         },
         defaultVariants: {

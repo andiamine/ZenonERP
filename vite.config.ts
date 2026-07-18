@@ -35,7 +35,7 @@ export default defineConfig({
                 zustand: { singleton: true, requiredVersion: '5.0.14' },
                 i18next: { singleton: true, requiredVersion: '26.3.6' },
                 'react-i18next': { singleton: true, requiredVersion: '17.0.10' },
-                // TODO(Phase 5): add '@tanstack/react-table' when it is installed.
+                '@tanstack/react-table': { singleton: true, requiredVersion: '8.21.3' },
                 // TODO(Phase 7 spike): share '@zenon/core' — it is a path alias, not a
                 // resolvable package; needs a package.json in resources/js/core first.
             },

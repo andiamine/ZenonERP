@@ -2,6 +2,7 @@ import { createRoute } from '@tanstack/react-router';
 import { lazy, Suspense, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BootstrapData, DashboardWidget, ZenonModule } from '@zenon/core/moduleTypes';
+import { hasPermission } from '@zenon/core/permissions';
 import { Card, CardContent, CardHeader, CardTitle, Spinner } from '@zenon/core/ui';
 import { appLayoutRoute } from './app-layout';
 
@@ -32,7 +33,7 @@ function DashboardPage() {
 
     const widgets = modules
         .flatMap((module) => module.widgets ?? [])
-        .filter((widget) => widget.permission === undefined || boot.permissions.includes(widget.permission));
+        .filter((widget) => widget.permission === undefined || hasPermission(boot, widget.permission));
 
     return (
         <div className="flex flex-col gap-6">

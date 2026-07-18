@@ -1,4 +1,15 @@
-import { Building2, History, LayoutDashboard, ListOrdered, Settings, Shield, Users, UsersRound } from 'lucide-react';
+import {
+    Building2,
+    ChevronsLeft,
+    ChevronsRight,
+    History,
+    LayoutDashboard,
+    ListOrdered,
+    Settings,
+    Shield,
+    Users,
+    UsersRound,
+} from 'lucide-react';
 import type { ComponentType } from 'react';
 import { cn } from './cn';
 
@@ -17,6 +28,8 @@ export const icons: Record<string, ComponentType<{ className?: string }>> = {
     'building-2': Building2,
     'list-ordered': ListOrdered,
     history: History,
+    'chevrons-left': ChevronsLeft,
+    'chevrons-right': ChevronsRight,
 };
 
 export interface NavIconProps {

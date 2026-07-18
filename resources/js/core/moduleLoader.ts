@@ -1,4 +1,5 @@
 import { moduleRegistry, registryHash } from '@generated/module-registry';
+import { registerModuleLocales } from './i18n';
 import type { BootstrapData, ZenonModule } from './moduleTypes';
 
 /**
@@ -29,7 +30,9 @@ export async function loadEnabledModules(boot: BootstrapData): Promise<ZenonModu
             continue;
         }
 
-        loaded.push((await entry.load()).default);
+        const module = (await entry.load()).default;
+        await registerModuleLocales(module);
+        loaded.push(module);
     }
 
     return loaded;

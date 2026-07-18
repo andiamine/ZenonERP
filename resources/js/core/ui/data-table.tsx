@@ -7,23 +7,11 @@ import {
     type SortingState,
 } from '@tanstack/react-table';
 import type { ReactNode } from 'react';
+import type { PageMeta } from '../apiClient';
 import { Button } from './button';
 import { cn } from './cn';
 import { Skeleton } from './skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
-
-/**
- * spatie/laravel-query-builder page-based paginator meta (CLAUDE.md §8). Defined here for
- * Task 9; Task 10 re-homes it under `@zenon/core/apiClient` once that module exists.
- */
-export interface PageMeta {
-    current_page: number;
-    from: number | null;
-    last_page: number;
-    per_page: number;
-    to: number | null;
-    total: number;
-}
 
 export interface DataTableProps<TData> {
     /** TanStack Table column defs. The value generic is deliberately `any` (TanStack's own
@@ -120,7 +108,9 @@ function DataTable<TData>({
             {meta && (
                 <div data-slot="data-table-pagination" className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
                     <span>
-                        {meta.total > 0 ? `${meta.from ?? 0}–${meta.to ?? 0} of ${meta.total}` : `0 of ${meta.total}`}
+                        {meta.total > 0
+                            ? `${(meta.current_page - 1) * meta.per_page + 1}–${Math.min(meta.current_page * meta.per_page, meta.total)} of ${meta.total}`
+                            : `0 of ${meta.total}`}
                     </span>
                     <div className="flex items-center gap-2">
                         <Button

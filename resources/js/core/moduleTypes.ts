@@ -25,6 +25,13 @@ export interface NavItem {
     icon?: string;
     to: string;
     permission?: string;
+    /**
+     * Sort weight within the flat nav (CLAUDE.md §7 band convention):
+     *   0–99   shell (dashboard = 0)
+     *   100–499 business verticals
+     *   500+   administration
+     * Ties break on `id`.
+     */
     order: number;
 }
 
@@ -54,11 +61,20 @@ export interface RemoteModuleRef {
     platform: string;
 }
 
+/** A tenant company, exactly the backend CompanyData::toArray() shape (§9.1). */
+export interface Company {
+    id: number;
+    name: string;
+    code: string;
+    currency_code: string;
+    is_default: boolean;
+}
+
 /** The /api/v1/bootstrap payload after unwrapping the top-level `data` key (§8). */
 export interface BootstrapData {
     user: { id: number; name: string; email: string };
     tenant: { id: string; name: string | null };
-    companies: unknown[];
+    companies: Company[];
     current_company_id: number | null;
     enabled_modules: string[];
     remote_modules: RemoteModuleRef[];

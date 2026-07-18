@@ -9,7 +9,7 @@ export { Button, buttonVariants } from './button';
 export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './card';
 export { Checkbox } from './checkbox';
 export { cn } from './cn';
-export { DataTable, type DataTableProps, type PageMeta } from './data-table';
+export { DataTable, type DataTableProps } from './data-table';
 export {
     Dialog,
     DialogClose,

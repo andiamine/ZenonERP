@@ -1,0 +1,18 @@
+{
+  "name": "Sequence",
+  "alias": "sequence",
+  "description": "Document numbering: per-company/per-doctype masks, gapless allocation, period resets.",
+  "providers": ["Modules\\Sequence\\Providers\\SequenceServiceProvider"],
+  "zenon": {
+    "id": "zenon/sequence",
+    "version": "1.0.0",
+    "core": false,
+    "requires": { "core": "^1.0" },
+    "provides": ["sequence.numbering"],
+    "hooks": { "emits": [] },
+    "permissions": ["sequence.sequences.view", "sequence.sequences.update"],
+    "frontend": { "entry": "resources/js/index.ts", "remote": null },
+    "platform": "^1.0",
+    "defaultEnabled": true
+  }
+}

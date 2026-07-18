@@ -1,0 +1,11 @@
+{
+  "name": "zenon/sequence",
+  "description": "ZenonERP sequence (document numbering) module.",
+  "type": "library",
+  "autoload": {
+    "psr-4": {
+      "Modules\\Sequence\\": "app/",
+      "Modules\\Sequence\\Database\\Seeders\\": "database/seeders/"
+    }
+  }
+}

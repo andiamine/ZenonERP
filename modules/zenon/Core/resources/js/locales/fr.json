@@ -1,0 +1,77 @@
+{
+    "nav": {
+        "settings": "Paramètres",
+        "users": "Utilisateurs",
+        "roles": "Rôles",
+        "teams": "Équipes",
+        "companies": "Sociétés"
+    },
+    "columns": {
+        "name": "Nom",
+        "email": "E-mail",
+        "roles": "Rôles",
+        "createdAt": "Créé le",
+        "permissionCount": "Autorisations",
+        "description": "Description",
+        "company": "Société",
+        "active": "Actif",
+        "code": "Code",
+        "currency": "Devise",
+        "default": "Par défaut"
+    },
+    "status": {
+        "active": "Actif",
+        "inactive": "Inactif"
+    },
+    "errors": {
+        "forbidden": "Accès refusé",
+        "generic": "Une erreur s'est produite"
+    },
+    "settings": {
+        "title": "Paramètres"
+    },
+    "users": {
+        "title": "Utilisateurs",
+        "create": "Nouvel utilisateur",
+        "searchPlaceholder": "Rechercher par nom…",
+        "empty": "Aucun utilisateur trouvé.",
+        "password": "Mot de passe",
+        "delete": "Supprimer l’utilisateur",
+        "deleteConfirm": "Supprimer {{name}} ? Cette action est irréversible.",
+        "roles": {
+            "title": "Rôles"
+        }
+    },
+    "roles": {
+        "title": "Rôles",
+        "create": "Nouveau rôle",
+        "edit": "Modifier le rôle",
+        "delete": "Supprimer le rôle",
+        "deleteConfirm": "Supprimer le rôle « {{name}} » ? Cette action est irréversible.",
+        "empty": "Aucun rôle défini.",
+        "permissions": "Autorisations"
+    },
+    "teams": {
+        "title": "Équipes",
+        "create": "Nouvelle équipe",
+        "edit": "Modifier l’équipe",
+        "delete": "Supprimer l’équipe",
+        "deleteConfirm": "Supprimer l’équipe « {{name}} » ? Cette action est irréversible.",
+        "empty": "Aucune équipe définie.",
+        "members": "Membres",
+        "shared": "Partagée (toutes les sociétés)"
+    },
+    "companies": {
+        "title": "Sociétés",
+        "create": "Nouvelle société",
+        "edit": "Modifier la société",
+        "delete": "Supprimer la société",
+        "deleteConfirm": "Supprimer la société « {{name}} » ? Cette action est irréversible.",
+        "empty": "Aucune société trouvée.",
+        "default": "Par défaut",
+        "legalName": "Raison sociale",
+        "countryCode": "Code pays",
+        "timezone": "Fuseau horaire",
+        "currencyPlaceholder": "Sélectionner une devise"
+    }
+}

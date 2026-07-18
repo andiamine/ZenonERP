@@ -1,0 +1,77 @@
+{
+    "nav": {
+        "settings": "Settings",
+        "users": "Users",
+        "roles": "Roles",
+        "teams": "Teams",
+        "companies": "Companies"
+    },
+    "columns": {
+        "name": "Name",
+        "email": "Email",
+        "roles": "Roles",
+        "createdAt": "Created",
+        "permissionCount": "Permissions",
+        "description": "Description",
+        "company": "Company",
+        "active": "Active",
+        "code": "Code",
+        "currency": "Currency",
+        "default": "Default"
+    },
+    "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+    },
+    "errors": {
+        "forbidden": "Access denied",
+        "generic": "Something went wrong"
+    },
+    "settings": {
+        "title": "Settings"
+    },
+    "users": {
+        "title": "Users",
+        "create": "New user",
+        "searchPlaceholder": "Search by name…",
+        "empty": "No users found.",
+        "password": "Password",
+        "delete": "Delete user",
+        "deleteConfirm": "Delete {{name}}? This action cannot be undone.",
+        "roles": {
+            "title": "Roles"
+        }
+    },
+    "roles": {
+        "title": "Roles",
+        "create": "New role",
+        "edit": "Edit role",
+        "delete": "Delete role",
+        "deleteConfirm": "Delete the role “{{name}}”? This action cannot be undone.",
+        "empty": "No roles defined.",
+        "permissions": "Permissions"
+    },
+    "teams": {
+        "title": "Teams",
+        "create": "New team",
+        "edit": "Edit team",
+        "delete": "Delete team",
+        "deleteConfirm": "Delete the team “{{name}}”? This action cannot be undone.",
+        "empty": "No teams defined.",
+        "members": "Members",
+        "shared": "Shared (all companies)"
+    },
+    "companies": {
+        "title": "Companies",
+        "create": "New company",
+        "edit": "Edit company",
+        "delete": "Delete company",
+        "deleteConfirm": "Delete the company “{{name}}”? This action cannot be undone.",
+        "empty": "No companies found.",
+        "default": "Default",
+        "legalName": "Legal name",
+        "countryCode": "Country code",
+        "timezone": "Timezone",
+        "currencyPlaceholder": "Select a currency"
+    }
+}

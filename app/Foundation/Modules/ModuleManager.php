@@ -44,6 +44,7 @@ final class ModuleManager
         private readonly DependencyResolver $resolver,
         private readonly ManifestValidator $validator,
         private readonly TenantModuleMigrator $tenantMigrator,
+        private readonly PermissionSynchronizer $permissionSynchronizer,
         private readonly ActivatorInterface $activator,
         private readonly Migrator $migrator,
     ) {}
@@ -249,6 +250,7 @@ final class ModuleManager
 
         $this->inTenantContext($tenant, function () use ($manifest, $tenant): void {
             $this->tenantMigrator->migrate($manifest);
+            $this->permissionSynchronizer->sync($manifest);
             $this->runSeeder($manifest);
             $this->lifecycle($manifest)?->enabled($tenant);
         });
@@ -297,6 +299,7 @@ final class ModuleManager
 
         $this->inTenantContext($tenant, function () use ($manifest, $tenant): void {
             $this->tenantMigrator->migrate($manifest);
+            $this->permissionSynchronizer->sync($manifest);
             $this->runSeeder($manifest);
             $this->lifecycle($manifest)?->enabled($tenant);
         });

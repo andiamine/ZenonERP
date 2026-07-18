@@ -2,6 +2,7 @@
 
 namespace App\Foundation\Modules;
 
+use App\Foundation\Company\SetCurrentCompany;
 use Illuminate\Support\Facades\Route;
 use Nwidart\Modules\Support\ModuleServiceProvider as NwidartModuleServiceProvider;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
@@ -11,7 +12,7 @@ use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
  * Base provider every ZenonERP module provider extends (CLAUDE.md §2). Composes with
  * nwidart's Support\ModuleServiceProvider (config/lang/commands registration) but owns
  * route mapping itself: the module's routes/api.php is auto-wrapped as
- * /api/v1/{alias}/* behind tenancy + the module.enabled gate.
+ * /api/v1/{alias}/* behind tenancy + the module.enabled gate + company resolution (§8).
  *
  * Routes register for every INSTALLED module on every boot (global route:cache stays
  * valid); per-tenant enablement is gated at runtime only (§5 — no per-tenant routes).
@@ -54,6 +55,7 @@ abstract class ModuleServiceProvider extends NwidartModuleServiceProvider
             InitializeTenancyBySubdomain::class, // TenancyServiceProvider priority-sorts tenancy middleware first
             PreventAccessFromCentralDomains::class,
             'module.enabled:'.$this->alias(),
+            SetCurrentCompany::class, // every module route gets company context automatically (§13 risk #1)
         ])
             ->prefix('api/v1/'.$this->alias())
             ->name($this->alias().'.')

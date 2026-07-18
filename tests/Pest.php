@@ -59,12 +59,14 @@ function tenantUser(Tenant $tenant, array $attributes = []): User
  * bypasses entirely under unit tests.
  *
  * @param  array<string, mixed>  $data
+ * @param  array<string, string>  $headers  extra request headers (e.g. X-Company-Id)
  */
-function statefulJson(string $method, string $host, string $uri, array $data = [], ?string $rawSessionCookie = null): TestResponse
+function statefulJson(string $method, string $host, string $uri, array $data = [], ?string $rawSessionCookie = null, array $headers = []): TestResponse
 {
     $test = test();
     $test->flushCookieState();
     $test->withHeader('Referer', "http://{$host}");
+    $test->withHeaders($headers);
 
     if ($rawSessionCookie !== null) {
         // getJson/postJson only forward cookies when withCredentials() is set.

@@ -7,3 +7,12 @@ parameters:
         - app
         - modules/zenon
         - tests/Fixtures
+    ignoreErrors:
+        -
+            # BelongsToCompany (CLAUDE.md §9.3) is a Foundation-owned trait that ships ahead
+            # of its first consumer: the zenon/core Company model, built in a later Phase 5
+            # task (Task 2 explicitly scopes the Company model itself out). PHPStan cannot
+            # analyse a trait's body without a class using it — a documented limitation
+            # (https://phpstan.org/blog/how-phpstan-analyses-traits), not a defect here.
+            identifier: trait.unused
+            path: app/Foundation/Company/BelongsToCompany.php

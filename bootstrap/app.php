@@ -1,6 +1,7 @@
 <?php
 
 use App\Foundation\Api\ApiExceptionRenderer;
+use App\Foundation\Company\SetCurrentCompany;
 use App\Foundation\Modules\Middleware\EnsureModuleEnabled;
 use App\Foundation\Tenancy\Middleware\InitializeTenancyOnTenantHosts;
 use Illuminate\Auth\Middleware\Authorize;
@@ -65,7 +66,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // would silently land in the CENTRAL DB on tenant hosts. Tenancy classes listed here
         // also make TenancyServiceProvider's prepends no-ops (in_array-guarded), keeping one
         // authoritative ordering. Entries below the Sanctum line are the framework defaults
-        // copied from Illuminate\Foundation\Http\Kernel::$middlewarePriority.
+        // copied from Illuminate\Foundation\Http\Kernel::$middlewarePriority, with
+        // SetCurrentCompany (§8) inserted immediately after AuthenticatesRequests — it must
+        // sort after route-level `auth:sanctum` so it sees the authenticated user.
         $middleware->priority([
             PreventAccessFromCentralDomains::class,
             InitializeTenancyByDomain::class,
@@ -81,6 +84,7 @@ return Application::configure(basePath: dirname(__DIR__))
             StartSession::class,
             ShareErrorsFromSession::class,
             AuthenticatesRequests::class,
+            SetCurrentCompany::class,
             ThrottleRequests::class,
             ThrottleRequestsWithRedis::class,
             AuthenticatesSessions::class,

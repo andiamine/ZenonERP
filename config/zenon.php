@@ -54,6 +54,36 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Company Model
+    |--------------------------------------------------------------------------
+    |
+    | String indirection (class-string, resolved lazily) so app/Foundation stays
+    | module-free — it must never `use Modules\...` directly. The Company model
+    | ships with the zenon/core module; nothing dereferences this until a model
+    | using BelongsToCompany calls the trait's company() relation.
+    |
+    */
+
+    'company_model' => 'Modules\\Core\\Models\\Company',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Kernel Module
+    |--------------------------------------------------------------------------
+    |
+    | The module alias SetCurrentCompany gates company resolution on (must be
+    | enabled for the tenant + bind Contracts\CompanyResolver before the header
+    | is honored). Production always uses "core". Overridable purely for
+    | testability: zenon/core doesn't exist until a later Phase 5 task, so tests
+    | point this at a fixture module (DummyCore, alias "dummycore") to exercise
+    | the positive path before Core is built.
+    |
+    */
+
+    'kernel_module' => 'core',
+
+    /*
+    |--------------------------------------------------------------------------
     | Reserved Subdomains
     |--------------------------------------------------------------------------
     |

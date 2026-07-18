@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Foundation\Company\CurrentCompany;
 use App\Foundation\Frontend\GeneratedModuleRegistry;
 use App\Foundation\Modules\ModuleRegistry;
 use Illuminate\Database\Migrations\Migrator;
@@ -20,6 +21,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Scoped for the same reason: memoizes a filesystem read per request/job.
         $this->app->scoped(GeneratedModuleRegistry::class);
+
+        // Scoped: the active company id is per-request state (SetCurrentCompany writes
+        // it, CompanyScope reads it) and must never survive past the request/job boundary.
+        $this->app->scoped(CurrentCompany::class);
 
         // Laravel registers the migrator only under the string key 'migrator' — alias it
         // so Foundation services can type-hint Migrator.

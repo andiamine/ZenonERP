@@ -2,6 +2,7 @@
 
 use App\Foundation\Frontend\GeneratedModuleRegistry;
 use Modules\Core\Models\Company;
+use Modules\Core\Models\Setting;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -92,6 +93,64 @@ it('fills companies/current_company_id/settings and gives an admin user permissi
             'core.fiscal_year_start_month' => 1,
         ])
         ->assertJsonPath('data.permissions', ['*']);
+});
+
+it('honors X-Company-Id: reports that company as current and returns ITS settings overrides', function () {
+    $tenant = createTenant('acme');
+    installModule('core');
+    enableModule('core', $tenant);
+
+    $user = tenantUser($tenant, ['email' => 'user@acme.test']);
+    $companyB = $tenant->run(function () use ($user) {
+        // The user belongs to both the default MAIN company (A) and a second company (B).
+        Company::query()->where('is_default', true)->firstOrFail()->users()->attach($user);
+        $companyB = Company::factory()->create(['code' => 'BETA', 'is_default' => false]);
+        $companyB->users()->attach($user);
+
+        // A company-B-only override — bootstrap must resolve settings against B, not the default.
+        Setting::query()->create([
+            'company_id' => $companyB->id,
+            'key' => 'core.timezone',
+            'value' => 'Europe/Paris',
+        ]);
+
+        return $companyB;
+    });
+
+    [, $cookie] = loginOn('acme.zenonerp.test', 'user@acme.test');
+
+    statefulJson('get', 'acme.zenonerp.test', '/api/v1/bootstrap', [], $cookie, ['X-Company-Id' => (string) $companyB->id])
+        ->assertOk()
+        ->assertJsonPath('data.current_company_id', $companyB->id)
+        ->assertJsonPath('data.settings', [
+            'core.default_currency' => 'USD',
+            'core.date_format' => 'Y-m-d',
+            'core.timezone' => 'Europe/Paris', // company-B override, NOT the 'UTC' default
+            'core.fiscal_year_start_month' => 1,
+        ]);
+});
+
+it('rejects a foreign X-Company-Id on bootstrap with the 403 forbidden envelope', function () {
+    $tenant = createTenant('acme');
+    installModule('core');
+    enableModule('core', $tenant);
+
+    $user = tenantUser($tenant, ['email' => 'user@acme.test']);
+    $foreignId = $tenant->run(function () use ($user) {
+        Company::query()->where('is_default', true)->firstOrFail()->users()->attach($user);
+
+        // A company the user is NOT a member of — the guard that keeps the SPA's stale-company
+        // clear-and-retry alive.
+        return Company::factory()->create(['code' => 'OTHER', 'is_default' => false])->id;
+    });
+
+    [, $cookie] = loginOn('acme.zenonerp.test', 'user@acme.test');
+
+    assertErrorEnvelope(
+        statefulJson('get', 'acme.zenonerp.test', '/api/v1/bootstrap', [], $cookie, ['X-Company-Id' => (string) $foreignId]),
+        403,
+        'forbidden',
+    );
 });
 
 it('gives a non-admin core-enabled user their real, sorted permission names', function () {

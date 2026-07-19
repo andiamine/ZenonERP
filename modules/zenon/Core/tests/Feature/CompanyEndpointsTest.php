@@ -54,6 +54,32 @@ it('lists, shows, creates, updates and deletes companies for a user granted the 
         ->assertNotFound();
 });
 
+it('attaches the creating user to the new company so it surfaces in their bootstrap companies', function () {
+    $tenant = bootCoreTenant();
+    $user = tenantUser($tenant, ['email' => 'creator@acme.test']);
+    $tenant->run(fn () => $user->givePermissionTo('core.companies.create'));
+
+    [, $cookie] = loginOn('acme.zenonerp.test', 'creator@acme.test');
+
+    $created = statefulJson('post', 'acme.zenonerp.test', '/api/v1/core/companies', [
+        'name' => 'Gamma Co', 'code' => 'GAMMA', 'currency_code' => 'USD',
+    ], $cookie)->assertCreated();
+
+    $companyId = $created->json('data.id');
+
+    // The pivot row exists — the creator is a member of the company they just created.
+    $tenant->run(function () use ($user, $companyId) {
+        expect(Company::findOrFail($companyId)->users()->whereKey($user->getKey())->exists())->toBeTrue();
+    });
+
+    // And it appears in their membership-filtered bootstrap payload (the switcher's source).
+    $companies = statefulJson('get', 'acme.zenonerp.test', '/api/v1/bootstrap', [], $cookie)
+        ->assertOk()
+        ->json('data.companies');
+
+    expect(collect($companies)->pluck('code')->all())->toContain('GAMMA');
+});
+
 it('flips 403 to 200 for GET /companies after granting core.companies.view via the roles endpoint (§12 verify criterion)', function () {
     $tenant = bootCoreTenant();
 

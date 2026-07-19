@@ -3,6 +3,7 @@
 namespace Modules\Core\Http\Controllers\Api\V1;
 
 use App\Foundation\Api\ApiController;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -42,7 +43,10 @@ class CompaniesController extends ApiController
 
     public function store(StoreCompanyRequest $request, CreateCompany $action): JsonResponse
     {
-        $company = $action->handle($request->validated());
+        /** @var User $actingUser */
+        $actingUser = $request->user();
+
+        $company = $action->handle($request->validated(), $actingUser);
 
         return CompanyResource::make($company)->response()->setStatusCode(201);
     }

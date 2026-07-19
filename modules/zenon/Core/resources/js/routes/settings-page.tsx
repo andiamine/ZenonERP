@@ -48,10 +48,15 @@ export function SettingsPage() {
     const [saved, setSaved] = useState(false);
     // Guards a window-focus refetch from clobbering in-progress edits; reset once saved.
     const dirty = useRef(false);
+    // The effective values as loaded — the baseline we diff against on save so only keys the
+    // user actually changed are written. Without this every Save would stamp a company-level
+    // override row for EVERY setting, permanently shadowing the tenant layer (§9.1).
+    const original = useRef<SettingsValues | null>(null);
 
     useEffect(() => {
         if (valuesQuery.data && !dirty.current) {
             setForm(valuesQuery.data.data);
+            original.current = valuesQuery.data.data;
         }
     }, [valuesQuery.data]);
 
@@ -71,9 +76,21 @@ export function SettingsPage() {
         if (form === null) {
             return;
         }
+        // Submit ONLY dirty keys (coerced value !== the loaded baseline). This is what keeps a
+        // Save from writing a company-level override for every untouched setting.
         const values: SettingsValues = {};
         for (const definition of definitions) {
-            values[definition.key] = coerce(definition.type, form[definition.key]);
+            const next = coerce(definition.type, form[definition.key]);
+            if (JSON.stringify(next) !== JSON.stringify(original.current?.[definition.key])) {
+                values[definition.key] = next;
+            }
+        }
+        // Nothing changed: no-op the request and just confirm — a bare Save must never create
+        // override rows.
+        if (Object.keys(values).length === 0) {
+            dirty.current = false;
+            setSaved(true);
+            return;
         }
         save.mutate(values, {
             onSuccess: () => {

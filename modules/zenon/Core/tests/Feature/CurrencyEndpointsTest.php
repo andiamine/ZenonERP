@@ -1,5 +1,6 @@
 <?php
 
+use Modules\Core\Models\Company;
 use Modules\Core\Models\Currency;
 
 it('lists, shows, creates, updates and deletes currencies for a user granted the relevant permissions', function () {
@@ -70,6 +71,33 @@ it('blocks deleting a currency referenced by a company with a 409 envelope', fun
     // MAIN (the seeded default company) has currency_code = 'USD'.
     assertErrorEnvelope(
         statefulJson('delete', 'acme.zenonerp.test', "/api/v1/core/currencies/{$usdId}", [], $cookie),
+        409,
+        'conflict',
+    );
+});
+
+it('rejects a duplicate currency rate (same currency, company and date) with a 409 envelope', function () {
+    $tenant = bootCoreTenant();
+    $user = tenantUser($tenant, ['email' => 'user@acme.test']);
+    [$usdId, $companyId] = $tenant->run(function () use ($user) {
+        $user->givePermissionTo('core.currencies.update');
+
+        return [
+            Currency::query()->where('code', 'USD')->firstOrFail()->id,
+            Company::query()->where('is_default', true)->firstOrFail()->id,
+        ];
+    });
+
+    [, $cookie] = loginOn('acme.zenonerp.test', 'user@acme.test');
+
+    $payload = ['rate' => '1.5', 'valid_from' => '2026-01-01', 'company_id' => $companyId];
+
+    statefulJson('post', 'acme.zenonerp.test', "/api/v1/core/currencies/{$usdId}/rates", $payload, $cookie)
+        ->assertCreated();
+
+    // Identical (currency, company, date) again → a clean 409 envelope, not a raw DB 500.
+    assertErrorEnvelope(
+        statefulJson('post', 'acme.zenonerp.test', "/api/v1/core/currencies/{$usdId}/rates", $payload, $cookie),
         409,
         'conflict',
     );

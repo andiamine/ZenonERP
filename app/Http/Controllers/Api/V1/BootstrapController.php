@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Foundation\Company\CurrentCompany;
 use App\Foundation\Frontend\GeneratedModuleRegistry;
 use App\Foundation\Modules\ModuleRegistry;
 use App\Http\Controllers\Controller;
@@ -30,6 +31,7 @@ class BootstrapController extends Controller
         Request $request,
         ModuleRegistry $registry,
         GeneratedModuleRegistry $generatedRegistry,
+        CurrentCompany $currentCompany,
     ): JsonResponse {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -45,7 +47,10 @@ class BootstrapController extends Controller
             && app()->bound(CompanyDirectory::class)) {
             $directory = app(CompanyDirectory::class);
             $companies = array_map(fn ($c) => $c->toArray(), $directory->companiesFor($user));
-            $currentCompanyId = $directory->defaultCompanyIdFor($user);
+            // SetCurrentCompany (on this route) already resolved the X-Company-Id header — or
+            // the user's default when absent — into CurrentCompany, validating membership.
+            // Honor it for BOTH the reported id and the settings map so the switcher works.
+            $currentCompanyId = $currentCompany->id() ?? $directory->defaultCompanyIdFor($user);
             $settings = (object) app(SettingsReader::class)->all($currentCompanyId);
         }
 

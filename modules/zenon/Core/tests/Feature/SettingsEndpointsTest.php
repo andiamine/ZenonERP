@@ -223,14 +223,17 @@ it('rejects a value of the wrong type with a 422 attributed to values.<key>', fu
 it('rejects a foreign X-Company-Id (a company the user is not assigned to) with the forbidden envelope', function () {
     $tenant = bootCoreTenant();
     $admin = tenantUser($tenant, ['email' => 'admin@acme.test']);
-    $tenant->run(fn () => $admin->assignRole('admin'));
+
+    // Company B is created directly, NOT via POST /companies — that endpoint now auto-attaches
+    // its creator (a member could never be "foreign"), so a genuinely foreign company has to
+    // be seeded without the admin as a member.
+    $companyBId = $tenant->run(function () use ($admin) {
+        $admin->assignRole('admin');
+
+        return Company::factory()->create(['code' => 'BETA', 'is_default' => false])->id;
+    });
 
     [, $adminCookie] = loginOn('acme.zenonerp.test', 'admin@acme.test');
-
-    $companyBId = statefulJson('post', 'acme.zenonerp.test', '/api/v1/core/companies', [
-        'name' => 'Beta Co', 'code' => 'BETA', 'currency_code' => 'USD',
-    ], $adminCookie)->assertCreated()->json('data.id');
-    // Deliberately NOT attaching $admin to company B.
 
     assertErrorEnvelope(
         statefulJson('get', 'acme.zenonerp.test', '/api/v1/core/settings', [], $adminCookie, ['X-Company-Id' => (string) $companyBId]),

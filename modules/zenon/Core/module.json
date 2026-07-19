@@ -9,7 +9,7 @@
     "core": true,
     "requires": {},
     "provides": ["core.companies", "core.settings", "core.currencies", "core.users", "core.roles", "core.teams"],
-    "hooks": { "emits": [] },
+    "hooks": { "emits": ["Modules\\Core\\Contracts\\Hooks\\CompanyApiResponse", "Modules\\Core\\Contracts\\Hooks\\CompanyDeleting"] },
     "permissions": [
       "core.companies.view", "core.companies.create", "core.companies.update", "core.companies.delete",
       "core.settings.view", "core.settings.update",

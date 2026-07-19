@@ -3,6 +3,7 @@
 namespace Modules\Core\Http\Controllers\Api\V1;
 
 use App\Foundation\Api\ApiController;
+use App\Foundation\Hooks\HookBus;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,7 @@ use Illuminate\Http\Response;
 use Modules\Core\Actions\CreateCompany;
 use Modules\Core\Actions\DeleteCompany;
 use Modules\Core\Actions\UpdateCompany;
+use Modules\Core\Contracts\Hooks\CompanyApiResponse;
 use Modules\Core\Http\Requests\StoreCompanyRequest;
 use Modules\Core\Http\Requests\UpdateCompanyRequest;
 use Modules\Core\Http\Resources\CompanyResource;
@@ -20,7 +22,7 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class CompaniesController extends ApiController
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request, HookBus $hooks): AnonymousResourceCollection
     {
         $companies = QueryBuilder::for(Company::class)
             ->allowedFilters(
@@ -33,12 +35,20 @@ class CompaniesController extends ApiController
             ->paginate($this->perPage($request))
             ->appends($request->query());
 
-        return CompanyResource::collection($companies);
+        $snapshot = array_values($companies->getCollection()
+            ->map(fn (Company $c) => ['id' => $c->id, 'name' => $c->name, 'code' => $c->code])
+            ->all());
+        $payload = $hooks->filter(new CompanyApiResponse($snapshot));
+
+        return CompanyResource::collection($companies)->additional(['extra' => (object) $payload->extra]);
     }
 
-    public function show(Company $company): CompanyResource
+    public function show(Company $company, HookBus $hooks): CompanyResource
     {
-        return CompanyResource::make($company);
+        $snapshot = [['id' => $company->id, 'name' => $company->name, 'code' => $company->code]];
+        $payload = $hooks->filter(new CompanyApiResponse($snapshot));
+
+        return CompanyResource::make($company)->additional(['extra' => (object) $payload->extra]);
     }
 
     public function store(StoreCompanyRequest $request, CreateCompany $action): JsonResponse

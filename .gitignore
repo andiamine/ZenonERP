@@ -17,6 +17,11 @@
 # packages/** are plain local packages (file: deps, not an npm workspace) — each
 # manages its own node_modules; root's anchored /node_modules above doesn't cover them.
 packages/*/node_modules
+# Third-party addons (modules/thirdparty/*) build their prebuilt remote with their own
+# node_modules (file: dep on @zenon/module-kit) — never committed; the addon's dist/ IS
+# committed (prebuilt Module Federation remote). The anchored /node_modules above only
+# covers the repo root, so this nested rule is required.
+modules/thirdparty/*/node_modules
 /public/build
 /public/fonts-manifest.dev.json
 /public/hot

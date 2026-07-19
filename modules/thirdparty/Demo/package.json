@@ -1,0 +1,14 @@
+{
+    "name": "zenon-addon-demo",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "zenon-module build",
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@zenon/core": "file:../../../resources/js/core",
+        "@zenon/module-kit": "file:../../../packages/module-kit",
+        "typescript": "~6.0.3"
+    }
+}

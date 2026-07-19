@@ -1,0 +1,27 @@
+{
+    "nav": {
+        "demo": "Demo"
+    },
+    "page": {
+        "title": "Demo — Company insights",
+        "cardTitle": "Companies",
+        "cardDescription": "The Insight and Computed by columns come from the Demo add-on's server-side hook.",
+        "empty": "No companies found.",
+        "noInsight": "No insight (add-on filter off)",
+        "error": "Could not load companies",
+        "errorHint": "Please try again."
+    },
+    "columns": {
+        "name": "Company",
+        "code": "Code",
+        "insight": "Insight",
+        "computedBy": "Computed by"
+    },
+    "widgets": {
+        "companies": {
+            "title": "Company insights (Demo add-on)",
+            "empty": "No companies to show.",
+            "noInsight": "No insight yet"
+        }
+    }
+}

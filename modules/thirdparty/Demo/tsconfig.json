@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "jsx": "react-jsx",
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "resolveJsonModule": true,
+        "noEmit": true,
+        "isolatedModules": true,
+        "verbatimModuleSyntax": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "types": ["vite/client"],
+        "paths": {
+            "@zenon/core": ["../../../resources/js/core"],
+            "@zenon/core/*": ["../../../resources/js/core/*"]
+        }
+    },
+    "include": ["resources/js/**/*"]
+}

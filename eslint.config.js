@@ -11,6 +11,9 @@ export default tseslint.config(
             'node_modules/**',
             'storage/**',
             'resources/js/generated/**',
+            // Third-party addon prebuilt remotes (Module Federation build output) are committed
+            // artifacts, not authored source — like resources/js/generated above, never linted.
+            'modules/thirdparty/*/dist/**',
             '.claude/**',
             '.remember/**',
             // @zenon/module-kit is a standalone Node package (not part of the SPA build,

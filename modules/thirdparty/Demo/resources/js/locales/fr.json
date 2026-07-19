@@ -1,0 +1,27 @@
+{
+    "nav": {
+        "demo": "Démo"
+    },
+    "page": {
+        "title": "Démo — Aperçus des sociétés",
+        "cardTitle": "Sociétés",
+        "cardDescription": "Les colonnes Aperçu et Calculé par proviennent du hook côté serveur du module Démo.",
+        "empty": "Aucune société trouvée.",
+        "noInsight": "Aucun aperçu (filtre du module désactivé)",
+        "error": "Impossible de charger les sociétés",
+        "errorHint": "Veuillez réessayer."
+    },
+    "columns": {
+        "name": "Société",
+        "code": "Code",
+        "insight": "Aperçu",
+        "computedBy": "Calculé par"
+    },
+    "widgets": {
+        "companies": {
+            "title": "Aperçus des sociétés (module Démo)",
+            "empty": "Aucune société à afficher.",
+            "noInsight": "Aucun aperçu pour le moment"
+        }
+    }
+}

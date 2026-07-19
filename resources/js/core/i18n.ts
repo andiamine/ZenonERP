@@ -50,6 +50,12 @@ const resources = {
                 title: 'Dashboard',
                 empty: 'No widgets enabled yet — enable modules to populate this dashboard.',
             },
+            remoteModules: {
+                noticeTitle: 'Some add-ons could not be loaded',
+                incompatible: 'Add-on "{{id}}" is not compatible with this platform version',
+                load_failed: 'Add-on "{{id}}" failed to load',
+                dismiss: 'Dismiss',
+            },
             errors: {
                 forbiddenTitle: 'Access denied',
                 forbiddenBody: "You don't have permission to view this page.",
@@ -104,6 +110,12 @@ const resources = {
             dashboard: {
                 title: 'Tableau de bord',
                 empty: 'Aucun widget activé pour le moment — activez des modules pour remplir ce tableau de bord.',
+            },
+            remoteModules: {
+                noticeTitle: "Certains modules complémentaires n'ont pas pu être chargés",
+                incompatible: "Le module \"{{id}}\" n'est pas compatible avec cette version de la plateforme",
+                load_failed: "Le module \"{{id}}\" n'a pas pu être chargé",
+                dismiss: 'Ignorer',
             },
             errors: {
                 forbiddenTitle: 'Accès refusé',

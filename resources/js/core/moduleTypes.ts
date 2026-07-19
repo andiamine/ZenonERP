@@ -49,16 +49,27 @@ export interface DashboardWidget {
  * Federation remote, loaded at runtime (Phase 7) — never baked into the registry file;
  * remote refs arrive via /api/v1/bootstrap.
  */
-export type RegistryEntry = {
-    source: 'bundled';
-    load: () => Promise<{ default: ZenonModule }>;
-};
+export type RegistryEntry =
+    | { source: 'bundled'; load: () => Promise<{ default: ZenonModule }> }
+    | { source: 'remote'; url: string; platform: string };
 
 /** Remote module reference as served by /api/v1/bootstrap (Phase 7 consumes). */
 export interface RemoteModuleRef {
     id: string;
     url: string;
     platform: string;
+}
+
+/**
+ * A remote addon the loader could not mount, surfaced to admins via a dismissible
+ * banner (Phase 7). `incompatible` = platform-version mismatch (refused before any
+ * network fetch); `load_failed` = the remote 404'd, threw, timed out, or exported a
+ * non-matching ZenonModule. Non-admins never see these — the console.warn fires for all.
+ */
+export interface RemoteModuleNotice {
+    id: string;
+    kind: 'incompatible' | 'load_failed';
+    detail: string;
 }
 
 /** A tenant company, exactly the backend CompanyData::toArray() shape (§9.1). */
@@ -82,6 +93,8 @@ export interface BootstrapData {
     settings: Record<string, unknown>;
     locale: string;
     registryHash: string | null;
+    /** Host platform version the remote-addon `platform` constraint is matched against (Task 2). */
+    platform_version: string;
 }
 
 /** Outcome of the boot-time bootstrap fetch. */

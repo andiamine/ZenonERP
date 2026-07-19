@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { RemoteModuleNotice } from './moduleTypes';
 
 /**
  * UI state ONLY (CLAUDE.md §7) — server state lives in TanStack Query.
@@ -19,6 +20,10 @@ interface UiState {
     currentCompanyId: number | null;
     setCompany: (id: number) => void;
     syncCompanyFromBoot: (id: number | null) => void;
+    /** Remote addons that failed to mount this boot (Phase 7) — shown to admins as a banner. */
+    remoteModuleNotices: RemoteModuleNotice[];
+    pushRemoteModuleNotice: (notice: RemoteModuleNotice) => void;
+    dismissRemoteModuleNotices: () => void;
 }
 
 function currentTheme(): Theme {
@@ -102,4 +107,25 @@ export const useUiStore = create<UiState>()((set) => ({
         }
         set({ currentCompanyId: id });
     },
+    remoteModuleNotices: [],
+    pushRemoteModuleNotice: (notice) =>
+        set((state) => {
+            // Dedupe by id+kind — the loader reports each remote at most once per kind, but a
+            // reload/re-boot could otherwise stack duplicates behind the same session store.
+            const duplicate = state.remoteModuleNotices.some((n) => n.id === notice.id && n.kind === notice.kind);
+
+            return duplicate ? state : { remoteModuleNotices: [...state.remoteModuleNotices, notice] };
+        }),
+    dismissRemoteModuleNotices: () => set({ remoteModuleNotices: [] }),
 }));
+
+/**
+ * Reports a remote-module failure: a console.warn for everyone (fires regardless of role)
+ * AND a deduped notice pushed into the store, which app-layout surfaces to admins as a
+ * dismissible banner. Lives here rather than in moduleLoader/remoteModules because the store
+ * must never import the loader — the loader imports this.
+ */
+export function reportRemoteFailure(id: string, kind: RemoteModuleNotice['kind'], detail: string): void {
+    console.warn(`[zenon] remote module "${id}" ${kind}: ${detail}`);
+    useUiStore.getState().pushRemoteModuleNotice({ id, kind, detail });
+}

@@ -1,23 +1,24 @@
 import { moduleRegistry, registryHash } from '@generated/module-registry';
 import { registerModuleLocales } from './i18n';
 import type { BootstrapData, ZenonModule } from './moduleTypes';
+import { loadRemoteModule, platformSatisfies, withTimeout } from './remoteModules';
+import { reportRemoteFailure } from './store';
 
 /**
- * Loads the frontends of the modules enabled for the current tenant (CLAUDE.md §7).
- * Phase 4 ships the seams; the registry is empty until Phase 5's first real module:
- *   - unknown module id → warn + skip (backend enabled something this build lacks)
- *   - registry hash mismatch → server assets are newer than this bundle → prompt reload
- *   - remote modules (bootstrap.remote_modules) → Phase 7 runtime MF loading; skip + warn
+ * Loads the frontends of the modules enabled for the current tenant (CLAUDE.md §7, §2).
+ * Two transports behind one contract:
+ *   - bundled (first-party) → the generated registry. Unknown id → warn + skip; a registry
+ *     hash mismatch means server assets are newer than this bundle → prompt reload.
+ *   - remote (third-party addon, boot.remote_modules) → Phase 7 runtime Module Federation:
+ *     platform-compat check → registerRemotes/loadRemote, EACH wrapped so any failure (404,
+ *     throw, timeout, bad export, platform mismatch, double id) isolates to a console.warn +
+ *     an admin banner notice and never breaks boot. Remotes append AFTER bundled → stable nav.
  */
 export async function loadEnabledModules(boot: BootstrapData): Promise<ZenonModule[]> {
     if (boot.registryHash !== null && boot.registryHash !== registryHash) {
         if (window.confirm('A new version of ZenonERP is available. Reload now?')) {
             window.location.reload();
         }
-    }
-
-    for (const remote of boot.remote_modules) {
-        console.warn(`[zenon] remote module "${remote.id}" skipped — runtime federation loading lands in Phase 7`);
     }
 
     const loaded: ZenonModule[] = [];
@@ -30,9 +31,58 @@ export async function loadEnabledModules(boot: BootstrapData): Promise<ZenonModu
             continue;
         }
 
+        // The generated registry is bundled-only by construction (remote refs arrive via
+        // boot.remote_modules, loaded below); this guard only narrows the widened union.
+        if (entry.source !== 'bundled') {
+            continue;
+        }
+
         const module = (await entry.load()).default;
         await registerModuleLocales(module);
         loaded.push(module);
+    }
+
+    // Remote addons (Phase 7). Concurrent + fully isolated: one broken remote never affects
+    // another or the bundled modules. `loadedIds` guards the (in-practice disjoint) case of an
+    // id present in both the registry and boot.remote_modules — skip the remote, warn only.
+    const loadedIds = new Set(loaded.map((module) => module.id));
+
+    const remoteResults = await Promise.allSettled(
+        boot.remote_modules.map(async (ref): Promise<ZenonModule | null> => {
+            if (loadedIds.has(ref.id)) {
+                console.warn(`[zenon] remote module "${ref.id}" skipped — id already loaded as a bundled module`);
+                return null;
+            }
+
+            if (!platformSatisfies(ref.platform, boot.platform_version)) {
+                reportRemoteFailure(
+                    ref.id,
+                    'incompatible',
+                    `addon requires platform ${ref.platform}, host is ${boot.platform_version}`,
+                );
+                return null;
+            }
+
+            const module = await withTimeout(loadRemoteModule(ref), 10_000);
+            await registerModuleLocales(module);
+
+            return module;
+        }),
+    );
+
+    for (const [i, ref] of boot.remote_modules.entries()) {
+        const result = remoteResults[i];
+        if (result === undefined) {
+            continue;
+        }
+
+        if (result.status === 'fulfilled') {
+            if (result.value !== null) {
+                loaded.push(result.value);
+            }
+        } else {
+            reportRemoteFailure(ref.id, 'load_failed', String(result.reason));
+        }
     }
 
     return loaded;

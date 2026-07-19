@@ -26,9 +26,18 @@ zenon-module build --watch
 ```
 
 Output (in `dist/`):
-- `remoteEntry.js` — the MF container entry, loaded by the host
-- `assets/*` — the addon's compiled JS/CSS chunks
+- `remoteEntry.js` — the MF container entry, loaded by the host. Its `init(shareScope)`
+  consumes the **host's** share scope (it does not spin up an isolated federation
+  instance), so react/`@zenon/core`/the TanStack libs/etc. resolve to the host's copies.
+- `assets/*` — the addon's compiled JS/CSS chunks plus the MF runtime-core glue
+  (`dist-*.js`, ~60 KB) the container needs to `init`/`get`.
 - `mf-manifest.json` — the MF manifest (`manifest: true`)
+
+The output is a **browser-only** remote. `@module-federation/vite` also emits a federation
+*host* init entry (`hostInit-*.js`) and a Node *SSR* remote entry (`remoteEntry.ssr.js` +
+`virtual_mf-exposes-ssr*.js`) for every exposes build; a ZenonERP addon is a pure remote
+mounted in a browser SPA host, so the kit prunes those artifacts from `dist/` (they are in
+nobody's browser load graph) — do not expect them.
 
 Ship the whole `dist/` directory in the addon zip.
 
@@ -90,3 +99,16 @@ host page to pick up changes.
 In-repo (first-party-adjacent) addons point their `tsconfig.json` `paths` at
 `resources/js/core` directly for `@zenon/core` types. A standalone published types
 package for external, out-of-repo addon authors is planned but not yet available.
+
+## Build-time `@zenon/core`
+
+Even though `@zenon/core` (and its `/ui`, `/apiClient`, … subpaths) is shared with
+`import: false` and never bundled, the addon build must still be able to **resolve** it:
+the federation plugin statically enumerates each shared module's named exports to generate
+the `import: false` re-export proxy. So `@zenon/core` must be present in the addon's
+`node_modules` at build time — add it as a `devDependency`:
+
+- in-repo: `"@zenon/core": "file:../../../resources/js/core"`
+- external authors: the future published `@zenon/core` package.
+
+Without it the build fails with `MISSING_EXPORT` for the named UI imports.

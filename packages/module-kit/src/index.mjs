@@ -42,6 +42,75 @@ export function remoteNameForAlias(alias) {
 }
 
 /**
+ * Drop the federation *host* + *SSR* artifacts that @module-federation/vite emits
+ * unconditionally for every exposes build but that a ZenonERP addon — a browser-only,
+ * pure remote (it exposes `./module`, consumes zero remotes) — never loads:
+ *
+ *  - `hostInit-*.js`  — the host auto-init entry. It initializes federation *as a host*
+ *    (so an app can `loadRemote()` others). A pure remote is never a host; the emitted
+ *    `remoteEntry.js` does not import it (verified: it is in nobody's load graph).
+ *  - `remoteEntry.ssr.js` + `virtual_mf-exposes-ssr*.js` — the Node SSR remote entry and
+ *    its exposes map. The SSR entry does a bare `import "@module-federation/runtime"`
+ *    (Node-external) and is only fetched by an SSR host; ZenonERP's host is a browser SPA.
+ *
+ * In 1.18.2 these have no suppression option — hostInit is added at index.js ~L8187 and
+ * emitted in buildStart ~L8723; the SSR entry is emitted at ~L7502-7514 — both gated only on
+ * "has exposes", not on any user flag. So we prune them from the output bundle (Rollup/Vite
+ * `generateBundle`), which is safe precisely because nothing in the browser `remoteEntry.js`
+ * graph references them, and clear the now-dangling `ssrRemoteEntry` pointer from the runtime
+ * manifest the host reads. The MF runtime-core glue (`dist-*.js`) is kept — the container
+ * genuinely needs it to `init`/`get` against the host's share scope.
+ *
+ * @returns {import('vite').Plugin}
+ */
+function pruneRemoteOnlyArtifacts() {
+    // A dist file that a browser-only remote never loads (see doc block above).
+    const isPrunedFile = (fileName) =>
+        /(^|\/)hostInit-[^/]*\.js$/.test(fileName) ||
+        /(^|\/)remoteEntry\.ssr\.js$/.test(fileName) ||
+        fileName.includes('virtual_mf-exposes-ssr');
+
+    // Rewrite a runtime/stats manifest so it no longer points at pruned files.
+    const scrubManifest = (asset) => {
+        if (!asset || asset.type !== 'asset' || typeof asset.source !== 'string') return;
+        try {
+            const parsed = JSON.parse(asset.source);
+            let changed = false;
+            if (parsed?.metaData?.ssrRemoteEntry) {
+                delete parsed.metaData.ssrRemoteEntry;
+                changed = true;
+            }
+            if (Array.isArray(parsed?.buildOutput)) {
+                const kept = parsed.buildOutput.filter((record) => !isPrunedFile(String(record?.fileName ?? '')));
+                if (kept.length !== parsed.buildOutput.length) {
+                    parsed.buildOutput = kept;
+                    changed = true;
+                }
+            }
+            if (changed) asset.source = JSON.stringify(parsed);
+        } catch {
+            // Leave the manifest untouched if it is not the shape we expect.
+        }
+    };
+
+    return {
+        name: 'zenon:prune-remote-only-artifacts',
+        apply: 'build',
+        enforce: 'post',
+        generateBundle(_options, bundle) {
+            for (const [fileName, output] of Object.entries(bundle)) {
+                const chunkName = output.type === 'chunk' ? output.name : undefined;
+                if (chunkName === 'hostInit' || chunkName === 'ssrRemoteEntry' || isPrunedFile(fileName)) {
+                    delete bundle[fileName];
+                }
+            }
+            scrubManifest(bundle['mf-manifest.json']);
+            scrubManifest(bundle['mf-stats.json']);
+        },
+    };
+}
+
+/**
  * Build the shared-singleton map for an addon remote: every host framework singleton
  * plus the full `@zenon/core` surface, all with `import: false` so the addon dist
  * never bundles react/core/etc — it can only run mounted inside the host.
@@ -85,11 +154,20 @@ export function defineAddonConfig({ alias, entry = 'resources/js/index.ts' }) {
                 manifest: true,
                 dts: false,
             }),
+            pruneRemoteOnlyArtifacts(),
         ],
         build: {
             outDir: 'dist',
             emptyOutDir: true,
             target: 'es2022',
+            // Headless remote: there is no app entry and no index.html. An empty `input`
+            // gives Vite/Rolldown a defined (non-default) input so it does NOT fall back to
+            // resolving `index.html` (UNRESOLVED_ENTRY) — @module-federation/vite reads this
+            // via getBuildInput (index.js ~L4420) and, seeing a defined input with no HTML
+            // file, leaves the exposed `./module` un-wrapped by any host bootstrap. The
+            // container's own chunks (remoteEntry.js, virtualExposes, share proxies) are
+            // emitted by the plugin regardless of this input.
+            rollupOptions: { input: {} },
         },
     });
 }

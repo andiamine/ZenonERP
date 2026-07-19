@@ -54,7 +54,6 @@ class SequenceStressCommand extends Command
         $generator = app(SequenceGenerator::class);
 
         $code = $this->argument('code');
-        $code = is_string($code) ? $code : '';
         $count = (int) $this->option('count');
         $company = $this->option('company');
         $companyId = is_numeric($company) ? (int) $company : null;

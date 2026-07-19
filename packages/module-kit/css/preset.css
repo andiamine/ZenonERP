@@ -1,0 +1,12 @@
+/*
+ * ZenonERP addon Tailwind preset — utilities only, PREFLIGHT OFF.
+ * The HOST owns preflight/base styles; addons must never re-emit them.
+ * Layer names match the host stylesheet so addon utilities join the same
+ * cascade layers (host declared them first => host layer order wins; within
+ * `utilities`, atomic classes behave identically on both sides).
+ */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+@import './tokens.css';
+@custom-variant dark (&:where(.dark, .dark *));

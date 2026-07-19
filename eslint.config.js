@@ -13,6 +13,10 @@ export default tseslint.config(
             'resources/js/generated/**',
             '.claude/**',
             '.remember/**',
+            // @zenon/module-kit is a standalone Node package (not part of the SPA build,
+            // not an npm workspace member) — Node-globals CLI code, own toolchain/lint
+            // story if/when it grows one (Task 4, Phase 7).
+            'packages/**',
         ],
     },
     js.configs.recommended,

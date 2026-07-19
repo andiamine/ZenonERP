@@ -14,6 +14,9 @@
 /.zed
 /auth.json
 /node_modules
+# packages/** are plain local packages (file: deps, not an npm workspace) — each
+# manages its own node_modules; root's anchored /node_modules above doesn't cover them.
+packages/*/node_modules
 /public/build
 /public/fonts-manifest.dev.json
 /public/hot

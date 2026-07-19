@@ -22,11 +22,13 @@ return [
     |
     | Semver version of the platform contract consumed by addon manifests
     | ("platform": "^1.0"). Remote frontends built against an incompatible
-    | major are refused by the loader before mounting.
+    | major are refused by the loader before mounting. env-only (not a config
+    | key elsewhere) so the runtime-mismatch drill can be exercised without a
+    | code change — bump ZENON_PLATFORM_VERSION and reboot.
     |
     */
 
-    'platform_version' => '1.0.0',
+    'platform_version' => env('ZENON_PLATFORM_VERSION', '1.0.0'),
 
     /*
     |--------------------------------------------------------------------------
@@ -65,6 +67,20 @@ return [
     */
 
     'company_model' => 'Modules\\Core\\Models\\Company',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Third-Party Module Root
+    |--------------------------------------------------------------------------
+    |
+    | Resolution root for zip-installed addons (nwidart scan path, CLAUDE.md §1)
+    | and the test seam ModuleAssetController resolves dist files under — a
+    | config indirection rather than a hard-coded base_path() so tests can
+    | point it at a temp fixture dir without a real addon on disk.
+    |
+    */
+
+    'thirdparty_path' => base_path('modules/thirdparty'),
 
     /*
     |--------------------------------------------------------------------------

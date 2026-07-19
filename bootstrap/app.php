@@ -4,6 +4,7 @@ use App\Foundation\Api\ApiExceptionRenderer;
 use App\Foundation\Company\SetCurrentCompany;
 use App\Foundation\Modules\Middleware\EnsureModuleEnabled;
 use App\Foundation\Tenancy\Middleware\InitializeTenancyOnTenantHosts;
+use App\Http\Controllers\ModuleAssetController;
 use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Contracts\Session\Middleware\AuthenticatesSessions;
@@ -44,6 +45,16 @@ return Application::configure(basePath: dirname(__DIR__))
                 InitializeTenancyBySubdomain::class,
                 PreventAccessFromCentralDomains::class,
             ])->prefix('api')->group(base_path('routes/tenant-api.php'));
+
+            // Prebuilt third-party addon dist files (CLAUDE.md §7). Deliberately outside
+            // BOTH the 'web' and 'api' middleware groups: these are static assets, host-
+            // agnostic (identical bytes on every tenant subdomain), and must never start a
+            // session (StartSession) or touch tenancy — a stray Set-Cookie or DB lookup on
+            // an asset request would be a bug. ModuleAssetController owns the traversal
+            // defense; the where() below is the first (not the only) layer.
+            Route::get('modules/thirdparty/{folder}/dist/{path}', ModuleAssetController::class)
+                ->where(['folder' => '[A-Za-z0-9]+', 'path' => '[A-Za-z0-9._/\-]+'])
+                ->name('module.asset');
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

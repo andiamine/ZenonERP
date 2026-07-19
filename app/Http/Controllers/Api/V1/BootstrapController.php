@@ -16,7 +16,7 @@ use Modules\Core\Contracts\Settings\SettingsReader;
 
 /**
  * SPA boot payload (CLAUDE.md §7), wrapped in `data` like every other endpoint.
- * remote_modules fills in later (Phase 7).
+ * remote_modules is populated from ModuleRegistry::remoteModulesFor() (Phase 7).
  *
  * companies/current_company_id/settings only import from Modules\Core\Contracts\* — the
  * one place the host app is allowed to reach into a module (CLAUDE.md §2 arch rule: never
@@ -64,13 +64,14 @@ class BootstrapController extends Controller
                 'companies' => $companies,
                 'current_company_id' => $currentCompanyId,
                 'enabled_modules' => $registry->enabledFor($tenant),
-                'remote_modules' => [],
+                'remote_modules' => $registry->remoteModulesFor($tenant),
                 'permissions' => $user->hasRole('admin')
                     ? ['*']
                     : $user->getAllPermissions()->pluck('name')->sort()->values()->all(),
                 'settings' => $settings,
                 'locale' => (string) config('app.locale'),
                 'registryHash' => $generatedRegistry->hash(),
+                'platform_version' => (string) config('zenon.platform_version'),
             ],
         ]);
     }

@@ -114,6 +114,39 @@ final class ModuleRegistry
         return in_array($alias, $this->enabledFor($tenant), true);
     }
 
+    /**
+     * Third-party remotes (CLAUDE.md §7) ready for the SPA loader: enabled-for-tenant
+     * manifests that declare a frontend.remote. Deliberately NO filesystem existence
+     * check (ModuleAssetController 404s on a missing file, which is enough) and NO
+     * platform filtering here — the loader owns compatibility refusal, so `platform`
+     * is passed through verbatim for it to judge (architectural decision D8).
+     *
+     * @return list<array{id: string, url: string, platform: string}>
+     */
+    public function remoteModulesFor(Tenant|string $tenant): array
+    {
+        $remotes = [];
+
+        foreach ($this->enabledFor($tenant) as $alias) {
+            $manifest = $this->manifest($alias);
+
+            if ($manifest->frontendRemote === null) {
+                continue;
+            }
+
+            $folder = basename(str_replace('\\', '/', $manifest->path));
+            $remote = str_replace('\\', '/', $manifest->frontendRemote);
+
+            $remotes[] = [
+                'id' => $alias,
+                'url' => '/modules/thirdparty/'.$folder.'/'.$remote,
+                'platform' => $manifest->platform,
+            ];
+        }
+
+        return $remotes;
+    }
+
     public function isEnabledForCurrentTenant(string $alias): bool
     {
         if (! tenancy()->initialized || tenant() === null) {

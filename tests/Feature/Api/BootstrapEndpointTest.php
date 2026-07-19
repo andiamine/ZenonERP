@@ -37,6 +37,7 @@ it('returns the full SPA boot payload', function () {
             'settings',
             'locale',
             'registryHash',
+            'platform_version',
         ]])
         ->assertJsonPath('data.user.email', 'user@acme.test')
         ->assertJsonPath('data.tenant.id', 'acme')
@@ -44,7 +45,10 @@ it('returns the full SPA boot payload', function () {
         ->assertJsonPath('data.permissions', ['reports.view', 'sales.orders.view']) // direct + via role, flattened + sorted
         ->assertJsonPath('data.companies', [])
         ->assertJsonPath('data.current_company_id', null)
+        // No thirdparty modules are installed in this test context — the populated
+        // (non-empty) case lands with the Demo addon task.
         ->assertJsonPath('data.remote_modules', [])
+        ->assertJsonPath('data.platform_version', '1.0.0')
         ->assertJsonPath('data.locale', 'en')
         // The hash advertised to the SPA is parsed from the committed registry artifact.
         ->assertJsonPath('data.registryHash', app(GeneratedModuleRegistry::class)->hash())

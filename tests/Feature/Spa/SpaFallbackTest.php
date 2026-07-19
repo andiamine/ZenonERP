@@ -62,6 +62,13 @@ it('still serves paths that merely start with a reserved word', function () {
     // "uploads" is not "up", "apidocs" is not "api/" — the lookahead is segment-precise.
     test()->get('http://acme.zenonerp.test/uploads')->assertOk()->assertViewIs('app');
     test()->get('http://acme.zenonerp.test/apidocs')->assertOk()->assertViewIs('app');
+    test()->get('http://acme.zenonerp.test/modulesfoo')->assertOk()->assertViewIs('app');
+});
+
+it('does not swallow missing third-party addon assets under the HTML shell', function () {
+    createTenant('acme');
+
+    test()->get('http://acme.zenonerp.test/modules/thirdparty/Demo/dist/missing.js')->assertNotFound();
 });
 
 it('404s on unknown tenant subdomains', function () {

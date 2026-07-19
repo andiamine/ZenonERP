@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Route;
  *   sanctum/* → csrf-cookie endpoint; unknown /sanctum/* paths must 404, not render HTML
  *   up        → framework health endpoint
  *   build/* storage/* vendor/* → assets; a missing chunk must 404, never HTML-200
+ *   modules/* → prebuilt third-party addon assets (ModuleAssetController); a missing
+ *               dist file must 404, never render the HTML shell
  *
  * Phase 8 adds `install/` here (the standalone-mode wizard). Keep this list in sync
  * with SpaFallbackTest.
@@ -24,5 +26,5 @@ use Illuminate\Support\Facades\Route;
  * InitializeTenancyOnTenantHosts prepend on the web group; central hosts pass through.
  */
 Route::get('/{path?}', SpaController::class)
-    ->where('path', '(?!(?:api|sanctum|build|storage|vendor)(?:/|$)|up$).*')
+    ->where('path', '(?!(?:api|sanctum|build|storage|vendor|modules)(?:/|$)|up$).*')
     ->name('spa');

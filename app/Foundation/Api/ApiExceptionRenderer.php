@@ -2,6 +2,7 @@
 
 namespace App\Foundation\Api;
 
+use App\Foundation\Hooks\ActionVetoedException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -20,10 +21,9 @@ use Throwable;
  * Runs as a render callback AFTER Handler::prepareException — ModelNotFound arrives as
  * NotFoundHttpException(404), AuthorizationException as AccessDeniedHttpException(403),
  * TokenMismatch as HttpException(419) — so the status map covers them. Validation and
- * authentication exceptions arrive raw and are matched explicitly.
- *
- * Phase 6: add an `$e instanceof ActionVetoedException` branch before the generic ones
- * → 422 'action_vetoed' with the veto reason/code.
+ * authentication exceptions arrive raw and are matched explicitly — as is
+ * ActionVetoedException (§6): 422 'action_vetoed', the veto reason as the message and
+ * the veto code as the envelope `code` (the only branch that populates it).
  */
 final class ApiExceptionRenderer
 {
@@ -49,6 +49,7 @@ final class ApiExceptionRenderer
         $traceId = (string) Str::uuid();
         $status = 500;
         $type = 'server_error';
+        $code = null;
         $errors = null;
         $headers = [];
         $message = config('app.debug') ? $e->getMessage() : 'Server error.';
@@ -59,6 +60,8 @@ final class ApiExceptionRenderer
             [$status, $type, $message] = [401, 'unauthenticated', 'Unauthenticated.'];
         } elseif ($e instanceof AuthorizationException) { // defensive: normally pre-converted to AccessDeniedHttpException
             [$status, $type, $message] = [403, 'forbidden', $e->getMessage() !== '' ? $e->getMessage() : 'Forbidden.'];
+        } elseif ($e instanceof ActionVetoedException) {
+            [$status, $type, $message, $code] = [422, 'action_vetoed', $e->getMessage(), $e->vetoCode];
         } elseif ($e instanceof HttpExceptionInterface) {
             $status = $e->getStatusCode();
             $type = self::STATUS_TYPES[$status] ?? ($status >= 500 ? 'server_error' : 'http_error');
@@ -77,7 +80,7 @@ final class ApiExceptionRenderer
             ]);
         }
 
-        $error = ['type' => $type, 'message' => $message, 'code' => null];
+        $error = ['type' => $type, 'message' => $message, 'code' => $code];
 
         if ($errors !== null) {
             $error['errors'] = $errors;

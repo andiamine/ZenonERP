@@ -3,6 +3,9 @@
 namespace App\Foundation\Modules;
 
 use App\Foundation\Company\SetCurrentCompany;
+use App\Foundation\Hooks\Extend;
+use App\Foundation\Hooks\HookBus;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Facades\Route;
 use Nwidart\Modules\Support\ModuleServiceProvider as NwidartModuleServiceProvider;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
@@ -22,6 +25,8 @@ use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
  */
 abstract class ModuleServiceProvider extends NwidartModuleServiceProvider
 {
+    private ?Extend $extend = null;
+
     public function boot(): void
     {
         $this->registerCommands();
@@ -40,6 +45,20 @@ abstract class ModuleServiceProvider extends NwidartModuleServiceProvider
     protected function alias(): string
     {
         return $this->nameLower;
+    }
+
+    /**
+     * The module's hook/listener registration facade (§6) — call from boot().
+     * Pre-stamped with this module's alias so every filter/listener registered through
+     * it is tenant-gated automatically; the only sanctioned registration path (§13 risk #1).
+     */
+    protected function extend(): Extend
+    {
+        return $this->extend ??= new Extend(
+            $this->app->make(HookBus::class),
+            $this->app->make(Dispatcher::class),
+            $this->alias(),
+        );
     }
 
     protected function mapApiRoutes(): void

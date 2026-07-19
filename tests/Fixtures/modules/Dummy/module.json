@@ -11,7 +11,10 @@
         "core": false,
         "requires": {},
         "provides": ["dummy.items"],
-        "hooks": {"emits": []},
+        "hooks": {"emits": [
+            "Modules\\Dummy\\Contracts\\Hooks\\DummyItemsApiResponse",
+            "Modules\\Dummy\\Contracts\\Hooks\\DummyItemConfirming"
+        ]},
         "permissions": ["dummy.items.view"],
         "frontend": {"entry": "resources/js/index.ts", "remote": null},
         "platform": "^1.0",

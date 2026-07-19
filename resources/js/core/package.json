@@ -1,0 +1,22 @@
+{
+    "name": "@zenon/core",
+    "version": "1.0.0",
+    "description": "ZenonERP core kit. version mirrors config/zenon.php platform_version — bump together.",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": "./index.ts",
+        "./ui": "./ui/index.ts",
+        "./apiClient": "./apiClient.ts",
+        "./auth": "./auth.ts",
+        "./bootstrap": "./bootstrap.ts",
+        "./i18n": "./i18n.ts",
+        "./moduleLoader": "./moduleLoader.ts",
+        "./moduleTypes": "./moduleTypes.ts",
+        "./nav": "./nav.tsx",
+        "./permissions": "./permissions.ts",
+        "./router": "./router.tsx",
+        "./store": "./store.ts",
+        "./companySwitcher": "./companySwitcher.tsx"
+    }
+}

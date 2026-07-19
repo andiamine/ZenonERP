@@ -1,4 +1,7 @@
 import { federation } from '@module-federation/vite';
+// @module-federation/runtime is pinned to 2.8.0 in package.json. It MUST equal the version in
+// @module-federation/vite's own dependencies (1.18.2 → runtime 2.8.0) so npm dedupes to a single
+// runtime shared by the plugin and the host — upgrade both together.
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
@@ -22,6 +25,10 @@ export default defineConfig({
             // also keeps the vulnerable adm-zip dev path (@module-federation/dts-plugin)
             // out of the build.
             dts: false,
+            // The app shell is a Blade view — there is no index.html for the plugin to inject
+            // its host-init into (default 'html'), so pin it to the JS entry explicitly. Makes
+            // the otherwise-implicit fallback deterministic.
+            hostInitInjectLocation: 'entry',
             shared: {
                 react: { singleton: true, requiredVersion: '19.2.7' },
                 // Trailing-slash entries cover React 19 subpath imports (react-dom/client,
@@ -36,14 +43,26 @@ export default defineConfig({
                 i18next: { singleton: true, requiredVersion: '26.3.6' },
                 'react-i18next': { singleton: true, requiredVersion: '17.0.10' },
                 '@tanstack/react-table': { singleton: true, requiredVersion: '8.21.3' },
-                // TODO(Phase 7 spike): share '@zenon/core' — it is a path alias, not a
-                // resolvable package; needs a package.json in resources/js/core first.
+                // @zenon/core platform surface (Phase 7). Explicit keys register eagerly at
+                // configResolved (deterministic share scope regardless of the host import graph);
+                // the trailing-slash key is a lazy catch-all for any other subpath.
+                // version = platform version (config/zenon.php + resources/js/core/package.json).
+                '@zenon/core': { singleton: true, version: '1.0.0', requiredVersion: '^1.0.0' },
+                '@zenon/core/': { singleton: true, version: '1.0.0', requiredVersion: '^1.0.0' },
+                '@zenon/core/ui': { singleton: true, version: '1.0.0', requiredVersion: '^1.0.0' },
+                '@zenon/core/apiClient': { singleton: true, version: '1.0.0', requiredVersion: '^1.0.0' },
+                '@zenon/core/permissions': { singleton: true, version: '1.0.0', requiredVersion: '^1.0.0' },
+                '@zenon/core/bootstrap': { singleton: true, version: '1.0.0', requiredVersion: '^1.0.0' },
+                '@zenon/core/store': { singleton: true, version: '1.0.0', requiredVersion: '^1.0.0' },
             },
         }),
     ],
     resolve: {
         alias: {
-            '@zenon/core': path.resolve(import.meta.dirname, 'resources/js/core'),
+            // '@zenon/core' is NOT aliased: Vite resolves resolve.alias before user plugins,
+            // so an aliased bare specifier would bypass the MF share proxy (resolveId) and could
+            // never be shared with runtime remotes. It is a real package now (file: dep →
+            // resources/js/core/package.json) and is declared in the federation shared config below.
             '@modules': path.resolve(import.meta.dirname, 'modules/zenon'),
             '@generated': path.resolve(import.meta.dirname, 'resources/js/generated'),
         },

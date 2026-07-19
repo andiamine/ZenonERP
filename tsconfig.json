@@ -15,11 +15,13 @@
         "forceConsistentCasingInFileNames": true,
         "types": ["vite/client"],
         "paths": {
-            "@zenon/core": ["./resources/js/core"],
-            "@zenon/core/*": ["./resources/js/core/*"],
             "@modules/*": ["./modules/zenon/*"],
             "@generated/*": ["./resources/js/generated/*"]
         }
     },
-    "include": ["resources/js/**/*", "modules/zenon/*/resources/js/**/*"]
+    "include": [
+        "resources/js/**/*",
+        "modules/zenon/*/resources/js/**/*",
+        "modules/thirdparty/*/resources/js/**/*"
+    ]
 }

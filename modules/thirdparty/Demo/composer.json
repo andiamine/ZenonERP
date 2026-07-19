@@ -1,0 +1,6 @@
+{
+    "name": "acme/demo",
+    "type": "zenon-module",
+    "description": "ZenonERP Demo addon (Phase 7 extension proof).",
+    "autoload": { "psr-4": { "Modules\\Demo\\": "app/" } }
+}

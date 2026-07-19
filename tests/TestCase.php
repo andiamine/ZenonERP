@@ -78,6 +78,8 @@ abstract class TestCase extends BaseTestCase
             'Core' => true,      // zenon/core (Task 5+) — Sequence/Audit join once Tasks 6/7 land
             'Sequence' => true,  // not on disk yet: harmless extra key, FileActivator::hasStatus()
             'Audit' => true,     // only looks up statuses for modules it actually discovers on disk
+            'Demo' => true,      // Phase 7 Task 5 — real thirdparty-scan-path addon, boots in every
+            // test process; runtime hook/listener behavior stays per-tenant gated
         ], JSON_PRETTY_PRINT));
     }
 }

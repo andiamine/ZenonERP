@@ -6,6 +6,7 @@ parameters:
     paths:
         - app
         - modules/zenon
+        - modules/thirdparty/Demo
         - tests/Fixtures
     excludePaths:
         # Module Pest suites (CLAUDE.md §11: Larastan covers app/** + modules/zenon/**

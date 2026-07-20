@@ -5,10 +5,10 @@ namespace App\Foundation\Modules;
 use App\Foundation\Company\SetCurrentCompany;
 use App\Foundation\Hooks\Extend;
 use App\Foundation\Hooks\HookBus;
+use App\Foundation\Tenancy\Middleware\InitializeTenancyByMode;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Facades\Route;
 use Nwidart\Modules\Support\ModuleServiceProvider as NwidartModuleServiceProvider;
-use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
 /**
@@ -71,7 +71,7 @@ abstract class ModuleServiceProvider extends NwidartModuleServiceProvider
 
         Route::middleware([
             'api',
-            InitializeTenancyBySubdomain::class, // TenancyServiceProvider priority-sorts tenancy middleware first
+            InitializeTenancyByMode::class, // subdomain (saas) vs domain (standalone); bootstrap/app.php priority-sorts tenancy middleware first
             PreventAccessFromCentralDomains::class,
             'module.enabled:'.$this->alias(),
             SetCurrentCompany::class, // every module route gets company context automatically (§13 risk #1)

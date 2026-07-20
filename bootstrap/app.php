@@ -3,6 +3,7 @@
 use App\Foundation\Api\ApiExceptionRenderer;
 use App\Foundation\Company\SetCurrentCompany;
 use App\Foundation\Modules\Middleware\EnsureModuleEnabled;
+use App\Foundation\Tenancy\Middleware\InitializeTenancyByMode;
 use App\Foundation\Tenancy\Middleware\InitializeTenancyOnTenantHosts;
 use App\Http\Controllers\ModuleAssetController;
 use Illuminate\Auth\Middleware\Authorize;
@@ -40,9 +41,11 @@ return Application::configure(basePath: dirname(__DIR__))
         then: function (): void {
             // Tenant API: same 'api' group + /api prefix, plus tenancy middleware.
             // The explicit priority list below sorts PreventAccess → Initialize first.
+            // InitializeTenancyByMode picks subdomain (saas) vs domain (standalone)
+            // identification per DeploymentMode (CLAUDE.md §7, Phase 8 Task 3).
             Route::middleware([
                 'api',
-                InitializeTenancyBySubdomain::class,
+                InitializeTenancyByMode::class,
                 PreventAccessFromCentralDomains::class,
             ])->prefix('api')->group(base_path('routes/tenant-api.php'));
 
@@ -98,6 +101,7 @@ return Application::configure(basePath: dirname(__DIR__))
             InitializeTenancyByDomainOrSubdomain::class,
             InitializeTenancyByPath::class,
             InitializeTenancyByRequestData::class,
+            InitializeTenancyByMode::class,
             InitializeTenancyOnTenantHosts::class,
             EnsureModuleEnabled::class,
             EnsureFrontendRequestsAreStateful::class,

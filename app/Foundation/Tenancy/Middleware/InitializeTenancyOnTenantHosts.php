@@ -4,18 +4,20 @@ namespace App\Foundation\Tenancy\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Web-group tenancy: central hosts pass through untouched; tenant subdomains get full
+ * Web-group tenancy: central hosts pass through untouched; tenant hosts get full
  * tenancy initialization BEFORE StartSession, so shared web routes (/sanctum/csrf-cookie
- * now, the Phase 4 SPA fallback later) read and write sessions in the tenant DB.
- * Unknown subdomains 404 via InitializeTenancyBySubdomain::$onFail.
+ * now, the Phase 4 SPA fallback later) read and write sessions in the tenant DB. The
+ * inner delegate is mode-aware (CLAUDE.md §7, Phase 8 Task 3): subdomain identification
+ * in saas, full-domain identification in standalone. Unknown hosts 404 via the
+ * delegate's underlying stancl `$onFail` (set for both identification strategies in
+ * TenancyServiceProvider::boot).
  */
 final class InitializeTenancyOnTenantHosts
 {
-    public function __construct(private readonly InitializeTenancyBySubdomain $inner) {}
+    public function __construct(private readonly InitializeTenancyByMode $inner) {}
 
     public function handle(Request $request, Closure $next): Response
     {

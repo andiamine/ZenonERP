@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Foundation\Tenancy\Actions\CreateTenant;
 use Illuminate\Console\Command;
 use Illuminate\Validation\ValidationException;
+use LogicException;
 
 class TenantCreateCommand extends Command
 {
@@ -27,6 +28,13 @@ class TenantCreateCommand extends Command
                     $this->components->error($message);
                 }
             }
+
+            return self::FAILURE;
+        } catch (LogicException $e) {
+            // Standalone-mode guard (CreateTenant::handle) — the console Application runs
+            // with catchExceptions(false), so without this an uncaught LogicException would
+            // surface as a raw error instead of a clean CLI failure.
+            $this->components->error($e->getMessage());
 
             return self::FAILURE;
         }

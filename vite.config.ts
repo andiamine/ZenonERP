@@ -54,6 +54,14 @@ export default defineConfig({
                 '@zenon/core/permissions': { singleton: true, version: '1.0.0', requiredVersion: '^1.0.0' },
                 '@zenon/core/bootstrap': { singleton: true, version: '1.0.0', requiredVersion: '^1.0.0' },
                 '@zenon/core/store': { singleton: true, version: '1.0.0', requiredVersion: '^1.0.0' },
+                // moduleTypes is type-only (compiles to an empty runtime module) but MUST be an
+                // explicit share: @module-federation/vite's remote export scanner registers it as
+                // a demanded key on any remote that `import type`s it (the root barrel's
+                // `export type * from './moduleTypes'` is followed textually), and the
+                // trailing-slash catch-all above only materializes from host-side VALUE imports —
+                // the host only type-imports moduleTypes, so without this explicit key it never
+                // lands in the share scope and the remote's import:false proxy throws at init.
+                '@zenon/core/moduleTypes': { singleton: true, version: '1.0.0', requiredVersion: '^1.0.0' },
             },
         }),
     ],

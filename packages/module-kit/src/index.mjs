@@ -28,6 +28,9 @@ const CORE_SURFACE = [
     '@zenon/core/permissions',
     '@zenon/core/bootstrap',
     '@zenon/core/store',
+    // Type-only (empty runtime module), but the remote export scanner demands it as an
+    // explicit share key regardless — see the matching comment in the host's vite.config.ts.
+    '@zenon/core/moduleTypes',
 ];
 
 /**

@@ -169,6 +169,8 @@ final class AddonZipInstaller
         $zenon = $manifest['zenon'] ?? null;
         $id = is_array($zenon) ? ($zenon['id'] ?? null) : null;
         $platform = is_array($zenon) ? ($zenon['platform'] ?? null) : null;
+        $frontend = is_array($zenon) ? ($zenon['frontend'] ?? null) : null;
+        $remote = is_array($frontend) ? ($frontend['remote'] ?? null) : null;
 
         if (! is_string($name) || $name === ''
             || ! is_string($alias) || $alias === ''
@@ -184,6 +186,23 @@ final class AddonZipInstaller
             throw new RuntimeException(sprintf(
                 'Module name [%s] must match ^[A-Z][A-Za-z0-9]*$ — it also names the target folder.',
                 $name,
+            ));
+        }
+
+        // The install-time semver check just below accepts full composer/semver, but the
+        // SPA runtime loader (resources/js/core/remoteModules.ts platformSatisfies) only
+        // understands `*`, `^MAJOR[.MINOR[.PATCH]]`, or a bare `MAJOR[.MINOR[.PATCH]]` — an
+        // addon with, say, `~1.2` and a remote frontend would install cleanly here and then
+        // be refused forever at mount time with no actionable signal. Addons without a
+        // remote frontend (backend-only) keep full semver freedom — the loader never
+        // evaluates their platform string.
+        if (is_string($remote) && $remote !== '' && preg_match('/^(\*|\^?\d+(\.\d+){0,2})$/', $platform) !== 1) {
+            throw new RuntimeException(sprintf(
+                'Addon declares a remote frontend (zenon.frontend.remote) but platform [%s] is not in a '
+                .'form the SPA loader understands: addons with a remote frontend must declare platform as '
+                .'^MAJOR[.MINOR[.PATCH]], an exact version, or * — the SPA loader does not evaluate other '
+                .'constraints.',
+                $platform,
             ));
         }
 

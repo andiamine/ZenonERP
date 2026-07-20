@@ -7,8 +7,11 @@ import { reportRemoteFailure } from './store';
 /**
  * Loads the frontends of the modules enabled for the current tenant (CLAUDE.md §7, §2).
  * Two transports behind one contract:
- *   - bundled (first-party) → the generated registry. Unknown id → warn + skip; a registry
- *     hash mismatch means server assets are newer than this bundle → prompt reload.
+ *   - bundled (first-party) → the generated registry. An id absent from the registry AND
+ *     from boot.remote_modules is genuinely unknown → warn + skip; an id absent from the
+ *     registry but present in boot.remote_modules is a remote addon → silently deferred to
+ *     the remote loop below. A registry hash mismatch means server assets are newer than
+ *     this bundle → prompt reload.
  *   - remote (third-party addon, boot.remote_modules) → Phase 7 runtime Module Federation:
  *     platform-compat check → registerRemotes/loadRemote, EACH wrapped so any failure (404,
  *     throw, timeout, bad export, platform mismatch, double id) isolates to a console.warn +
@@ -22,11 +25,16 @@ export async function loadEnabledModules(boot: BootstrapData): Promise<ZenonModu
     }
 
     const loaded: ZenonModule[] = [];
+    const remoteIds = new Set(boot.remote_modules.map((ref) => ref.id));
 
     for (const id of boot.enabled_modules) {
         const entry = moduleRegistry[id];
 
         if (entry === undefined) {
+            if (remoteIds.has(id)) {
+                continue; // handled by the remote loop below
+            }
+
             console.warn(`[zenon] unknown module id "${id}" — skipped (not in this build's registry)`);
             continue;
         }

@@ -79,4 +79,12 @@ export default tseslint.config(
             ],
         },
     },
+    {
+        // The shared core barrel's re-export list must stay free of trailing commas: the
+        // @module-federation/vite 1.18.2 remote export scanner (used to build the
+        // `import: false` re-export proxy for shared modules — see packages/module-kit's
+        // README "Build-time @zenon/core") breaks on a trailing comma in this file.
+        files: ['resources/js/core/ui/index.ts'],
+        rules: { 'comma-dangle': ['error', 'never'] },
+    },
 );

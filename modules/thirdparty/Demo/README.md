@@ -27,18 +27,24 @@ should follow the vendor-prefixed convention.
 
 ## Build / package / install
 
-The PHP half here is the backend consumer; the frontend half (a `ZenonModule` built as a
-prebuilt Module Federation remote via `@zenon/module-kit`) and its `dist/` output land in
-a later task — `module.json` already points `zenon.frontend.remote` at
-`dist/remoteEntry.js`, which does not exist on disk yet.
+The PHP half here is the backend consumer; the frontend half is a `ZenonModule` built as
+a prebuilt Module Federation remote via `@zenon/module-kit`, with its compiled `dist/`
+output committed alongside the source — `module.json` points `zenon.frontend.remote` at
+`dist/remoteEntry.js`.
 
-Once the frontend lands, the intended workflow is:
+To rebuild the frontend after changing `resources/js/`:
 
 ```
-npx zenon-module build           # compiles resources/js → dist/remoteEntry.js + CSS
-php artisan zenon:module:package Demo       # zips modules/thirdparty/Demo for distribution
-php artisan zenon:module:install-zip <zip>  # installs an addon zip into modules/thirdparty/
+npm install       # first time only (or after a @zenon/module-kit / lockfile change)
+npm run build     # zenon-module build — compiles resources/js → dist/remoteEntry.js + CSS
 ```
 
-`zenon:module:package` / `zenon:module:install-zip` land in a parallel task; this addon
-is already shaped to work with them once they exist.
+To package and install the addon exactly as a marketplace zip-install would:
+
+```
+php artisan zenon:module:package Demo       # zips modules/thirdparty/Demo → storage/app/packages/acme-demo-1.0.0.zip
+php artisan zenon:module:install-zip <zip>  # installs the zip into modules/thirdparty/
+```
+
+Then enable the module per tenant as usual (`zenon:module:enable demo --tenant=...` /
+the admin UI) — no SPA rebuild, no Node needed on the server.

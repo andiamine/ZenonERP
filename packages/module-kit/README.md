@@ -44,8 +44,8 @@ Ship the whole `dist/` directory in the addon zip.
 ## Allowed imports
 
 - `@zenon/core` and its subpaths (`@zenon/core/ui`, `@zenon/core/apiClient`,
-  `@zenon/core/permissions`, `@zenon/core/bootstrap`, `@zenon/core/store`) — shared
-  singletons, consumed from the host.
+  `@zenon/core/permissions`, `@zenon/core/bootstrap`, `@zenon/core/store`,
+  `@zenon/core/moduleTypes`) — shared singletons, consumed from the host.
 - The host's framework singleton list: `react`, `react-dom` (and their subpath
   entries), `@base-ui/react`, `@tanstack/react-router`, `@tanstack/react-query`,
   `@tanstack/react-table`, `zustand`, `i18next`, `react-i18next`.
@@ -83,10 +83,22 @@ fight the host's cascade.
 
 ## `platform` grammar
 
-The addon's `module.json` → `zenon.platform` field must be `^MAJOR[.MINOR]`
-(e.g. `^1.0`, `^1`). The host loader refuses to mount a remote whose `platform`
-string it cannot parse, or whose major doesn't match — with an admin notice, never
-a crash.
+Install-time (`zenon:module:install-zip`) accepts the full composer/semver grammar for
+`zenon.platform` — but for an addon with a remote frontend, the SPA host loader is the
+thing that actually evaluates it at mount time, and the loader only understands a
+narrower grammar:
+
+- `*` — always compatible.
+- `^MAJOR[.MINOR[.PATCH]]` (e.g. `^1`, `^1.0`, `^1.2.3`) — caret range.
+- a bare `MAJOR[.MINOR[.PATCH]]` (e.g. `1`, `1.0`, `1.2.3`) — exact-prefix match.
+
+Anything else (`~1.2`, `>=1.0 <2.0`, `1.0 - 2.0`, …) is refused at mount, with an admin
+notice, never a crash — and because a backend-installed addon's `install-zip` preflight
+only validates against this narrower grammar when `zenon.frontend.remote` is set, an
+addon with a remote frontend and an out-of-grammar `platform` string will install
+cleanly and then be permanently unmountable. Always author a remote addon's `platform`
+field in the grammar above. (Backend-only addons — `zenon.frontend.remote: null` — are
+never mounted by the SPA loader and keep full composer/semver freedom.)
 
 ## Dev workflow
 

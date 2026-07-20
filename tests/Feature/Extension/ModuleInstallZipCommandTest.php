@@ -55,6 +55,7 @@ function buildZipdemoZip(
     array $extraEntries = [],
     bool $includeManifest = true,
     ?string $rawManifest = null,
+    ?string $remote = null,
 ): void {
     $prefix = $wrapper !== null ? $wrapper.'/' : '';
 
@@ -70,7 +71,7 @@ function buildZipdemoZip(
             'provides' => [],
             'hooks' => ['emits' => []],
             'permissions' => [],
-            'frontend' => ['entry' => null, 'remote' => null],
+            'frontend' => ['entry' => null, 'remote' => $remote],
             'platform' => $platform,
             'defaultEnabled' => false,
         ],
@@ -197,6 +198,54 @@ it('refuses an incompatible platform constraint, mentioning both versions, leavi
 
     assertNoResidueIn($this->tmpTarget);
     expect(InstalledModule::query()->where('alias', 'zipdemo')->exists())->toBeFalse();
+});
+
+it('refuses a remote-declaring addon whose platform the SPA loader cannot evaluate, leaving no residue', function () {
+    // '~1.2' is valid composer/semver but outside the loader grammar
+    // (`*` | `^MAJOR[.MINOR[.PATCH]]` | bare `MAJOR[.MINOR[.PATCH]]`) — an addon shipping a
+    // remote frontend with this platform string would install cleanly and then be
+    // permanently refused at mount, undiagnosable. Preflight must catch it up front.
+    $zipPath = $this->zipDir.'/zipdemo.zip';
+    buildZipdemoZip($zipPath, platform: '~1.2', remote: 'dist/remoteEntry.js');
+
+    $this->artisan('zenon:module:install-zip', ['path' => $zipPath])
+        ->expectsOutputToContain('addons with a remote frontend must declare platform')
+        ->assertFailed();
+
+    assertNoResidueIn($this->tmpTarget);
+    expect(InstalledModule::query()->where('alias', 'zipdemo')->exists())->toBeFalse();
+});
+
+it('installs a remote-declaring addon whose platform the SPA loader can evaluate (^1.0)', function () {
+    $zipPath = $this->zipDir.'/zipdemo.zip';
+    buildZipdemoZip($zipPath, platform: '^1.0', remote: 'dist/remoteEntry.js');
+
+    $this->artisan('zenon:module:install-zip', ['path' => $zipPath])
+        ->expectsOutputToContain('Installed [zipdemo]')
+        ->assertSuccessful();
+
+    expect(is_dir($this->tmpTarget.'/Zipdemo'))->toBeTrue();
+    expect(is_file($this->tmpTarget.'/Zipdemo/module.json'))->toBeTrue();
+    expect(InstalledModule::query()->where('alias', 'zipdemo')->exists())->toBeTrue();
+
+    Process::assertRan('composer dump-autoload');
+});
+
+it('passes preflight for a backend-only addon (no remote frontend) using a platform constraint outside the loader grammar', function () {
+    // No frontend.remote → full composer/semver freedom; the loader grammar restriction
+    // from the previous two scenarios must NOT apply here. Override platform_version so
+    // the (unrelated, still-enforced) Semver::satisfies() check also succeeds — this
+    // proves the whole preflight passes, not just the grammar check.
+    config(['zenon.platform_version' => '1.5.0']);
+
+    $zipPath = $this->zipDir.'/zipdemo.zip';
+    buildZipdemoZip($zipPath, platform: '~1.2', remote: null);
+
+    $this->artisan('zenon:module:install-zip', ['path' => $zipPath])
+        ->expectsOutputToContain('Installed [zipdemo]')
+        ->assertSuccessful();
+
+    expect(InstalledModule::query()->where('alias', 'zipdemo')->exists())->toBeTrue();
 });
 
 it('refuses a zip-slip entry escaping via ".." segments, leaving no residue', function () {

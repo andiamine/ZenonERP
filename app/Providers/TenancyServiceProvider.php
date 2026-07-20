@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Foundation\Tenancy\Jobs\CreateTenantDatabase;
+use App\Foundation\Tenancy\Jobs\DeleteTenantDatabase;
 use App\Foundation\Tenancy\Jobs\ProvisionTenantModules;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\Facades\Event;
@@ -26,7 +28,7 @@ class TenancyServiceProvider extends ServiceProvider
             Events\CreatingTenant::class => [],
             Events\TenantCreated::class => [
                 JobPipeline::make([
-                    Jobs\CreateDatabase::class,
+                    CreateTenantDatabase::class,           // wraps CreateDatabase: swallows the pipeline-breaking `false` for pre-created-DB tenants
                     Jobs\MigrateDatabase::class,           // platform base tenant schema (database/migrations/tenant)
                     ProvisionTenantModules::class,         // core + default modules via the identical enable flow (§5)
                 ])->send(function (Events\TenantCreated $event) {
@@ -40,7 +42,7 @@ class TenancyServiceProvider extends ServiceProvider
             Events\DeletingTenant::class => [],
             Events\TenantDeleted::class => [
                 JobPipeline::make([
-                    Jobs\DeleteDatabase::class,
+                    DeleteTenantDatabase::class,           // wraps DeleteDatabase: early-returns instead of dropping a pre-created-DB tenant's database
                 ])->send(function (Events\TenantDeleted $event) {
                     return $event->tenant;
                 })->shouldBeQueued(false), // `false` by default, but you probably want to make this `true` for production.
@@ -101,9 +103,12 @@ class TenancyServiceProvider extends ServiceProvider
         $this->makeTenancyMiddlewareHighestPriority();
 
         // Unknown/central hostnames hitting tenant routes → clean 404 instead of an unhandled
-        // identification exception (500). The static lives on the shared parent middleware, so
-        // this single assignment covers subdomain and domain identification alike.
+        // identification exception (500). Every stancl identification middleware redeclares
+        // its own `public static $onFail` (there is no shared parent static covering all of
+        // them), so each one actually used must be set explicitly. Subdomain identification is
+        // saas mode; domain identification is standalone mode (Phase 8 Task 3 onward).
         Middleware\InitializeTenancyBySubdomain::$onFail = fn () => abort(404);
+        Middleware\InitializeTenancyByDomain::$onFail = fn () => abort(404);
     }
 
     protected function bootEvents(): void

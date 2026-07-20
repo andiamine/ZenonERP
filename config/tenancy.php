@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Foundation\Tenancy\Bootstrappers\PermissionCacheTenancyBootstrapper;
 use App\Foundation\Tenancy\Bootstrappers\PrefixCacheTenancyBootstrapper;
 use App\Foundation\Tenancy\Bootstrappers\SessionAuthTenancyBootstrapper;
+use App\Foundation\Tenancy\CentralDomains;
 use App\Models\Tenant;
 use Stancl\Tenancy\Bootstrappers\DatabaseTenancyBootstrapper;
 use Stancl\Tenancy\Bootstrappers\FilesystemTenancyBootstrapper;
@@ -25,13 +26,19 @@ return [
      * The list of domains hosting your central app.
      *
      * Only relevant if you're using the domain or subdomain identification middleware.
+     *
+     * Env-driven (Phase 8, standalone mode): TENANCY_CENTRAL_DOMAINS is a comma-separated
+     * list, trimmed and empty-filtered by {@see CentralDomains::parse()}. Unset (null)
+     * falls back to the exact pre-Phase-8 hardcoded list below — zero behavior change for
+     * saas/tests. The standalone installer writes it EMPTY on purpose (single tenant, no
+     * central routes) — see CentralDomains' docblock for why blank is not "unset".
      */
-    'central_domains' => [
+    'central_domains' => CentralDomains::parse(env('TENANCY_CENTRAL_DOMAINS'), [
         'zenonerp.test',     // REQUIRED bare base domain — InitializeTenancyBySubdomain matches hostnames via endsWith() against this list
         'app.zenonerp.test', // central app domain (PreventAccessFromCentralDomains exact match + central route registration)
         'localhost',
         '127.0.0.1',
-    ],
+    ]),
 
     /**
      * Tenancy bootstrappers are executed when tenancy is initialized.

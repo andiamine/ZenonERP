@@ -63,6 +63,16 @@ it('still serves paths that merely start with a reserved word', function () {
     test()->get('http://acme.zenonerp.test/uploads')->assertOk()->assertViewIs('app');
     test()->get('http://acme.zenonerp.test/apidocs')->assertOk()->assertViewIs('app');
     test()->get('http://acme.zenonerp.test/modulesfoo')->assertOk()->assertViewIs('app');
+    test()->get('http://acme.zenonerp.test/installfoo')->assertOk()->assertViewIs('app');
+});
+
+it('does not swallow the installer path under the HTML shell', function () {
+    createTenant('acme');
+
+    // The SPA catch-all excludes `install` (routes/web.php); /install itself is served by
+    // routes/installer.php (EnsureInstallerAvailable), which 404s in saas mode — it must
+    // never fall through to the HTML shell.
+    test()->get('http://acme.zenonerp.test/install')->assertNotFound();
 });
 
 it('does not swallow missing third-party addon assets under the HTML shell', function () {

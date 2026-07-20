@@ -12,9 +12,11 @@ use Illuminate\Support\Facades\Route;
  *   build/* storage/* vendor/* → assets; a missing chunk must 404, never HTML-200
  *   modules/* → prebuilt third-party addon assets (ModuleAssetController); a missing
  *               dist file must 404, never render the HTML shell
+ *   install/* → the standalone-mode installer wizard (routes/installer.php,
+ *               registered outside web/api in bootstrap/app.php); the SPA shell must
+ *               never shadow it, in saas mode or standalone
  *
- * Phase 8 adds `install/` here (the standalone-mode wizard). Keep this list in sync
- * with SpaFallbackTest.
+ * Keep this list in sync with SpaFallbackTest.
  *
  * The exclusion lives in the route CONSTRAINT (negative lookahead, no ^/$ anchors —
  * Symfony wraps the requirement) rather than Route::fallback(), because web.php
@@ -26,5 +28,5 @@ use Illuminate\Support\Facades\Route;
  * InitializeTenancyOnTenantHosts prepend on the web group; central hosts pass through.
  */
 Route::get('/{path?}', SpaController::class)
-    ->where('path', '(?!(?:api|sanctum|build|storage|vendor|modules)(?:/|$)|up$).*')
+    ->where('path', '(?!(?:api|sanctum|build|storage|vendor|modules|install)(?:/|$)|up$).*')
     ->name('spa');

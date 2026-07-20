@@ -1,8 +1,10 @@
 <?php
 
+use App\Foundation\Installer\InstallerState;
 use App\Foundation\Tenancy\Actions\CreateTenant;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 
 /**
  * Phase 8 Task 3: mode-aware tenancy identification. Standalone mode identifies the
@@ -13,9 +15,27 @@ use Illuminate\Support\Facades\DB;
  * of the suite staying green is the saas regression proof (do not modify existing
  * tests). Config is read per-request (DeploymentMode::current(), CentralDomains
  * consumers), so no reboot is needed between tests.
+ *
+ * Phase 8 Task 5 added RedirectIfNotInstalled, which now intercepts every 'web'-group
+ * request in standalone mode until the installer lock exists — these fixtures model an
+ * already-provisioned tenant (in production that can't exist without the wizard having
+ * run), so beforeEach marks the (temp, per-test) lock installed up front. This does not
+ * affect the api-only tests below (routes/tenant-api.php sits outside the web group).
  */
 beforeEach(function () {
-    config(['zenon.mode' => 'standalone', 'tenancy.central_domains' => []]);
+    $this->installerLockPath = storage_path('framework/testing/installer-'.uniqid().'.lock');
+
+    config([
+        'zenon.mode' => 'standalone',
+        'tenancy.central_domains' => [],
+        'zenon.installer.lock_path' => $this->installerLockPath,
+    ]);
+
+    app(InstallerState::class)->markInstalled();
+});
+
+afterEach(function () {
+    File::delete($this->installerLockPath);
 });
 
 /**

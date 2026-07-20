@@ -2,6 +2,8 @@
 
 use App\Foundation\Api\ApiExceptionRenderer;
 use App\Foundation\Company\SetCurrentCompany;
+use App\Foundation\Installer\Middleware\EnsureInstallerAvailable;
+use App\Foundation\Installer\Middleware\RedirectIfNotInstalled;
 use App\Foundation\Modules\Middleware\EnsureModuleEnabled;
 use App\Foundation\Tenancy\Middleware\InitializeTenancyByMode;
 use App\Foundation\Tenancy\Middleware\InitializeTenancyOnTenantHosts;
@@ -58,6 +60,16 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::get('modules/thirdparty/{folder}/dist/{path}', ModuleAssetController::class)
                 ->where(['folder' => '[A-Za-z0-9]+', 'path' => '[A-Za-z0-9._/\-]+'])
                 ->name('module.asset');
+
+            // Standalone-mode installer wizard (CLAUDE.md §7 Phase 8). Deliberately outside
+            // BOTH the 'web' and 'api' groups: a fresh extract has an empty APP_KEY and no
+            // database, so StartSession/EncryptCookies/CSRF/tenancy must never run here —
+            // EnsureInstallerAvailable (404 unless standalone + uninstalled, same-origin
+            // check on unsafe methods) is the sole gate. Mirrors the tenant-api registration
+            // pattern above.
+            Route::middleware([EnsureInstallerAvailable::class])
+                ->prefix('install')
+                ->group(base_path('routes/installer.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -66,7 +78,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Shared web routes (/sanctum/csrf-cookie now, the Phase 4 SPA fallback later) get
         // tenant context on tenant subdomains before StartSession touches the DB.
-        $middleware->web(prepend: [InitializeTenancyOnTenantHosts::class]);
+        // RedirectIfNotInstalled (Phase 8) runs first: a fresh standalone extract has no
+        // APP_KEY/DB/tenant, so nothing past it may run until the wizard has provisioned it.
+        $middleware->web(prepend: [RedirectIfNotInstalled::class, InitializeTenancyOnTenantHosts::class]);
 
         $middleware->alias([
             'module.enabled' => EnsureModuleEnabled::class,
@@ -94,7 +108,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // EnsureModuleEnabled only needs tenant() resolved, never auth/session state, so
         // running it first is always safe and makes a disabled module 404 before the
         // request even touches sessions or authentication.
+        //
+        // RedirectIfNotInstalled (Phase 8) is inserted at the very top, ahead of even
+        // PreventAccessFromCentralDomains: pure config+filesystem, must run before anything
+        // that could touch a nonexistent database on a fresh standalone extract. Insertion
+        // only — the rest of this list is unchanged and unreordered (see the web-group
+        // prepend comment above; Phase 8 Task 3 note applies here too).
         $middleware->priority([
+            RedirectIfNotInstalled::class,
             PreventAccessFromCentralDomains::class,
             InitializeTenancyByDomain::class,
             InitializeTenancyBySubdomain::class,

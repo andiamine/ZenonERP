@@ -275,7 +275,11 @@ final class AddonZipInstaller
             $contents = stream_get_contents($stream);
             fclose($stream);
 
-            File::put($destination, $contents === false ? '' : $contents);
+            if ($contents === false) {
+                throw new RuntimeException(sprintf('Failed to read zip entry [%s].', $name));
+            }
+
+            File::put($destination, $contents);
         }
     }
 

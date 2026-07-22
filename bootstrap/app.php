@@ -141,11 +141,23 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // shouldRenderJsonWhen() REPLACES the framework default (Handler::shouldReturnJson()
+        // normally falls back to $request->expectsJson()) rather than OR-ing with it — so
+        // without 'install/api/*' here, a FormRequest validation failure on the installer's
+        // step API (routes/installer.php, registered outside web/api — no session, so it
+        // relies on the client's Accept header rather than a redirect-back target) would
+        // render as an HTML redirect instead of JSON even though the wizard sends
+        // Accept: application/json (CLAUDE.md §7 Phase 8 Task 6 — found live via
+        // InstallerAvailabilityTest expecting 422 and getting 302).
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*') || $request->is('install/api/*'),
         );
 
         // §8 single error envelope renderer — api/* only; web keeps framework defaults.
+        // install/api/* deliberately does NOT get the envelope here: it's a distinct
+        // pre-tenancy/pre-auth surface (CLAUDE.md §7 Phase 8) with its own flat
+        // { error: {...} } shapes per endpoint (InstallerController) — only the JSON-vs-
+        // redirect decision above is shared with it, not the envelope shape.
         $exceptions->render(
             fn (Throwable $e, Request $request) => $request->is('api/*')
                 ? ApiExceptionRenderer::render($e, $request)

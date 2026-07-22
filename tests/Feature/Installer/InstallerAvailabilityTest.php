@@ -13,6 +13,14 @@ use Illuminate\Support\Facades\File;
  * tenancy init) sends every other path to /install on a fresh, unprovisioned standalone
  * extract, and gets out of the way once installed or in saas mode.
  *
+ * The unsafe-method (POST) coverage below exercises this against the real
+ * POST /install/api/database endpoint — Task 6 superseded the Task-5 `api/ping` test seam
+ * outright (it no longer exists). An empty JSON body still keeps these assertions' original
+ * meaning: a cross-origin/originless request never reaches the controller at all (403, from
+ * the middleware); a same-origin request DOES reach the controller and fails FormRequest
+ * validation on the empty body instead (422 — "not 403" is what's being proven here, not the
+ * exact success shape, which InstallerFlowTest covers).
+ *
  * lock_path is pointed at a throwaway per-test file so this suite never touches a real
  * installed.lock.
  */
@@ -46,21 +54,21 @@ it('rejects an unsafe request with a cross-origin Origin header', function () {
     config(['zenon.mode' => 'standalone']);
 
     test()->withHeaders(['Origin' => 'http://evil.test'])
-        ->post('http://erp.example.test/install/api/ping')
+        ->postJson('http://erp.example.test/install/api/database')
         ->assertForbidden();
 });
 
 it('rejects an unsafe request with neither Origin nor Referer', function () {
     config(['zenon.mode' => 'standalone']);
 
-    test()->post('http://erp.example.test/install/api/ping')->assertForbidden();
+    test()->postJson('http://erp.example.test/install/api/database')->assertForbidden();
 });
 
 it('falls back to the Referer host when Origin is absent, rejecting a cross-origin Referer', function () {
     config(['zenon.mode' => 'standalone']);
 
     test()->withHeaders(['Referer' => 'http://evil.test/somewhere'])
-        ->post('http://erp.example.test/install/api/ping')
+        ->postJson('http://erp.example.test/install/api/database')
         ->assertForbidden();
 });
 
@@ -68,16 +76,16 @@ it('passes the same-origin gate for a same-origin Origin header', function () {
     config(['zenon.mode' => 'standalone']);
 
     test()->withHeaders(['Origin' => 'http://erp.example.test'])
-        ->post('http://erp.example.test/install/api/ping')
-        ->assertNoContent();
+        ->postJson('http://erp.example.test/install/api/database')
+        ->assertStatus(422); // past the middleware gate; FormRequest rejects the empty body
 });
 
 it('passes the same-origin gate via Referer when Origin is absent', function () {
     config(['zenon.mode' => 'standalone']);
 
     test()->withHeaders(['Referer' => 'http://erp.example.test/install'])
-        ->post('http://erp.example.test/install/api/ping')
-        ->assertNoContent();
+        ->postJson('http://erp.example.test/install/api/database')
+        ->assertStatus(422); // past the middleware gate; FormRequest rejects the empty body
 });
 
 it('redirects / to /install in standalone mode while unlocked', function () {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Installer\InstallerController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -11,19 +12,20 @@ use Illuminate\Support\Facades\Route;
 | in EnsureInstallerAvailable — no StartSession, no EncryptCookies, no CSRF, no tenancy, so
 | this boots with an empty APP_KEY and no database (CLAUDE.md §7 Phase 8).
 |
-| Task 5 ships only the GET stub below. Task 6 adds the step API:
-| GET /install/api/{status,requirements}, POST /install/api/{database,migrate,tenant,
-| admin,finalize}. Task 7 replaces the GET / stub with the wizard Blade view.
+| GET / stays the Task 5 stub until Task 7 replaces it with the wizard Blade view.
+| Everything below is Task 6's step API: GET /install/api/{status,requirements},
+| POST /install/api/{database,migrate,tenant,admin,finalize} — see
+| App\Http\Controllers\Installer\InstallerController.
 |
 */
 
 Route::get('/', fn () => response('ZenonERP Installer'))->name('installer.show');
 
-// Task-5 test seam ONLY: exercises EnsureInstallerAvailable's same-origin check on an
-// unsafe (POST) method. A plain `POST /install` can't be used for that — with no POST
-// route registered there yet, Laravel throws MethodNotAllowedHttpException while matching
-// the route (AbstractRouteCollection::handleMatchedRoute), which happens BEFORE any
-// group middleware runs for an unmatched route — so the 403 would never be reachable to
-// assert. This stub is superseded outright once Task 6 adds real POST /install/api/*
-// endpoints (delete it then, don't keep it alongside them).
-Route::post('api/ping', fn () => response()->noContent())->name('installer.ping');
+Route::get('api/status', [InstallerController::class, 'status'])->name('installer.status');
+Route::get('api/requirements', [InstallerController::class, 'requirements'])->name('installer.requirements');
+
+Route::post('api/database', [InstallerController::class, 'database'])->name('installer.database');
+Route::post('api/migrate', [InstallerController::class, 'migrate'])->name('installer.migrate');
+Route::post('api/tenant', [InstallerController::class, 'tenant'])->name('installer.tenant');
+Route::post('api/admin', [InstallerController::class, 'admin'])->name('installer.admin');
+Route::post('api/finalize', [InstallerController::class, 'finalize'])->name('installer.finalize');

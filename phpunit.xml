@@ -20,6 +20,19 @@
         </include>
     </source>
     <php>
+        <!--
+            The full suite runs as a single PHP process (no test-process isolation), so
+            per-test resource footprint (Laravel boot, sqlite migrations, tenant DB
+            juggling) accumulates across the whole run rather than resetting per test.
+            Phase 8 Task 6 added 13 Installer tests on top of Phase 7's 326 and pushed
+            cumulative peak usage past WAMP's php.ini default of 128M (verified: the
+            same 128M ceiling passes cleanly on the pre-Task-6 tree; every one of the 339
+            tests passes with no assertion failures once given headroom) — this is normal
+            growth of a monolithic suite, not a per-test state leak. Bumped here (repo-
+            scoped, not the machine's php.ini) rather than relying on each developer/CI
+            runner discovering the ceiling and raising it out-of-band.
+        -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_URL" value="http://app.zenonerp.test"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>

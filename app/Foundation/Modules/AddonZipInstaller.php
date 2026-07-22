@@ -406,8 +406,10 @@ final class AddonZipInstaller
 
             if ($actualTotalBytes > $maxTotalBytes) {
                 throw new RuntimeException(sprintf(
-                    'Zip has streamed more than %d bytes in total, exceeding the limit '
+                    'Zip entry [%s] pushed the streamed total to %d actual bytes, exceeding the %d-byte limit '
                     .'(zenon.addon_zip.max_total_bytes) — this zip\'s declared total cannot be trusted.',
+                    $name,
+                    $actualTotalBytes,
                     $maxTotalBytes,
                 ));
             }

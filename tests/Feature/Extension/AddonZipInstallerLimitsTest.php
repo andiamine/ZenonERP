@@ -351,3 +351,88 @@ it('refuses a zip whose central directory forges a small declared size for an en
     // The failure happens mid-extraction (before moveDirectory), so composer never runs.
     Process::assertNothingRan();
 });
+
+it('refuses a zip whose central directory forges tiny declared sizes for several entries whose ACTUAL streamed total exceeds the limit (streaming-total guard)', function () {
+    // Streaming-total analogue of the single-entry forged-header test above: three ~800-byte
+    // real entries, EACH forged in the central directory down to a tiny declared size (10),
+    // so the pre-scan's declared total (~30 bytes from the bombs, plus the honest
+    // module.json/composer.json/provider.php sizes) sails through comfortably under
+    // max_total_bytes — only the AUTHORITATIVE streaming guard, which sums ACTUAL bytes
+    // read via extractTo()'s stream_get_contents(), ever sees the true ~2400-byte bomb
+    // total. max_entry_bytes (1000) sits above every real entry (including each 800-byte
+    // bomb), so the per-entry cap never trips — only the running-TOTAL guard can catch this.
+    $realPayload = str_repeat('A', 800);
+    $fakeDeclaredSize = 10;
+    $bombNames = ['assets/bomb1.bin', 'assets/bomb2.bin', 'assets/bomb3.bin'];
+
+    config([
+        'zenon.addon_zip.max_entry_bytes' => 1_000,
+        'zenon.addon_zip.max_total_bytes' => 1_500,
+        'zenon.addon_zip.max_entries' => 100,
+    ]);
+
+    $zipPath = $this->limitsZipDir.'/limitsdemo.zip';
+    buildLimitsAddonZip($zipPath, extraEntries: array_combine($bombNames, array_fill(0, count($bombNames), $realPayload)));
+
+    // Compute the exact ACTUAL running total (and the entry at which it first crosses
+    // max_total_bytes) from the REAL, not-yet-forged per-entry declared sizes, in the same
+    // order the installer's extractTo() iterates zip entries — dynamic, like the "sitting
+    // EXACTLY at all three configured limits" boundary test above, rather than hardcoding
+    // the manifest/composer/provider byte counts.
+    $probeBeforeForge = new ZipArchive;
+    $probeBeforeForge->open($zipPath);
+    $runningTotal = 0;
+    $expectedTripEntry = null;
+    $expectedTripTotal = null;
+
+    for ($i = 0; $i < $probeBeforeForge->numFiles; $i++) {
+        $stat = $probeBeforeForge->statIndex($i);
+        $runningTotal += $stat['size'];
+
+        if ($expectedTripEntry === null && $runningTotal > 1_500) {
+            $expectedTripEntry = $stat['name'];
+            $expectedTripTotal = $runningTotal;
+        }
+    }
+    $probeBeforeForge->close();
+
+    // Sanity: the fixture really does exceed 1500 real bytes somewhere before any forging —
+    // if this stops holding, the test fixture (not the guard) is wrong.
+    expect($expectedTripEntry)->not->toBeNull();
+
+    foreach ($bombNames as $bombName) {
+        forgeCentralDirectoryUncompressedSize($zipPath, $bombName, $fakeDeclaredSize);
+    }
+
+    // Sanity-check the forgery fooled statIndex() for all three bombs — if this ever stops
+    // holding (e.g. a future libzip trusts the local file header instead), this test must
+    // fail LOUDLY here rather than silently degrading into a re-test of the pre-scan (same
+    // rationale as the single-entry forged-header test above).
+    $probeAfterForge = new ZipArchive;
+    $probeAfterForge->open($zipPath);
+
+    foreach ($bombNames as $bombName) {
+        $stat = $probeAfterForge->statIndex($probeAfterForge->locateName($bombName));
+        expect($stat['size'])->toBe($fakeDeclaredSize);
+    }
+
+    $probeAfterForge->close();
+
+    // Single combined substring check (see the note above about expectsOutputToContain()
+    // consuming one matching console write per call) — asserts the STREAMING-total message
+    // specifically: it names the entry AND the accumulated actual bytes, which is exactly
+    // what distinguishes it from the pre-scan's "Zip declares a total uncompressed size of
+    // at least..." message asserted in the declared-total pre-scan test above.
+    $this->artisan('zenon:module:install-zip', ['path' => $zipPath])
+        ->expectsOutputToContain(sprintf(
+            'Zip entry [%s] pushed the streamed total to %d actual bytes, exceeding the 1500-byte limit (zenon.addon_zip.max_total_bytes)',
+            $expectedTripEntry,
+            $expectedTripTotal,
+        ))
+        ->assertFailed();
+
+    assertNoResidueInLimitsTarget($this->limitsTarget);
+    expect(InstalledModule::query()->where('alias', 'limitsdemo')->exists())->toBeFalse();
+    // The failure happens mid-extraction (before moveDirectory), so composer never runs.
+    Process::assertNothingRan();
+});

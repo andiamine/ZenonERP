@@ -264,7 +264,7 @@
                 </table>
                 <div class="actions">
                     <button type="button" id="requirements-recheck">Re-check</button>
-                    <button type="button" id="requirements-next" class="btn-primary">Next</button>
+                    <button type="button" id="requirements-next" class="btn-primary" disabled>Next</button>
                 </div>
             </section>
 
@@ -454,6 +454,13 @@
         var stepList = byId('step-list');
 
         // --- fetch helper --------------------------------------------------------------
+        // A network-level failure (fetch() itself rejects — e.g. the server process dies
+        // mid-request, the classic shared-hosting execution-time kill during the migrate
+        // step) is shaped into the SAME { error: { message } } result shape a normal
+        // non-2xx response produces, rather than left to reject and bubble past every
+        // caller. That keeps exactly one catch site: every caller already awaits api()
+        // and always reaches its own setBusy(button, false)/handleFailure() afterward, so
+        // a rejected fetch can no longer leave a button stuck disabled with no message.
         async function api(method, path, body) {
             var opts = { method: method, headers: { Accept: 'application/json' } };
 
@@ -462,7 +469,18 @@
                 opts.body = JSON.stringify(body);
             }
 
-            var response = await fetch(path, opts);
+            var response;
+
+            try {
+                response = await fetch(path, opts);
+            } catch (networkError) {
+                return {
+                    ok: false,
+                    status: 0,
+                    json: { error: { message: 'Network error — the server did not respond. Check the server logs, then retry.' } },
+                };
+            }
+
             var json = null;
 
             try {

@@ -155,6 +155,7 @@ function installerFlowWalk(): void
 
     expect($envContent)->toMatch('/^APP_KEY=base64:.+$/m')
         ->toMatch('/^TENANCY_CENTRAL_DOMAINS=$/m') // literal blank line — CentralDomains::parse() contract
+        ->toContain('APP_NAME="Acme Co"') // posted app_name contains a space -> EnvWriter quotes it
         ->toContain('APP_URL=http://erp.example.test')
         ->toContain('APP_ENV=production')
         ->toContain('APP_DEBUG=false')

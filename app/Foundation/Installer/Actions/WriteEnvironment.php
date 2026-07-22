@@ -58,6 +58,7 @@ final class WriteEnvironment
 
         $this->writer->write($path, [
             'APP_KEY' => 'base64:'.base64_encode(Encrypter::generateKey((string) config('app.cipher'))),
+            'APP_NAME' => (string) $data['app_name'],
             'APP_URL' => $appUrl,
             'APP_ENV' => 'production',
             'APP_DEBUG' => 'false',

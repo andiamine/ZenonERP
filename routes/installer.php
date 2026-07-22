@@ -12,14 +12,16 @@ use Illuminate\Support\Facades\Route;
 | in EnsureInstallerAvailable — no StartSession, no EncryptCookies, no CSRF, no tenancy, so
 | this boots with an empty APP_KEY and no database (CLAUDE.md §7 Phase 8).
 |
-| GET / stays the Task 5 stub until Task 7 replaces it with the wizard Blade view.
-| Everything below is Task 6's step API: GET /install/api/{status,requirements},
+| GET / renders the self-contained wizard view (resources/views/installer.blade.php —
+| CLAUDE.md §7 Phase 8 Task 7, the documented amendment to "app.blade.php is the ONLY
+| Blade file": inline CSS + vanilla JS, zero build, so it renders before any build/DB
+| exists). Everything below is Task 6's step API: GET /install/api/{status,requirements},
 | POST /install/api/{database,migrate,tenant,admin,finalize} — see
 | App\Http\Controllers\Installer\InstallerController.
 |
 */
 
-Route::get('/', fn () => response('ZenonERP Installer'))->name('installer.show');
+Route::get('/', fn () => view('installer'))->name('installer.show');
 
 Route::get('api/status', [InstallerController::class, 'status'])->name('installer.status');
 Route::get('api/requirements', [InstallerController::class, 'requirements'])->name('installer.requirements');

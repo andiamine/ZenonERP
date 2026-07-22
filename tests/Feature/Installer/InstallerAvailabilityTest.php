@@ -37,10 +37,28 @@ it('404s /install in saas mode', function () {
     test()->get('http://app.zenonerp.test/install')->assertNotFound();
 });
 
-it('serves the installer stub in standalone mode while unlocked', function () {
+it('serves the installer wizard view in standalone mode while unlocked', function () {
     config(['zenon.mode' => 'standalone']);
 
-    test()->get('http://erp.example.test/install')->assertOk();
+    // Phase 8 Task 7: GET /install now renders resources/views/installer.blade.php (the
+    // self-contained wizard view) instead of the Task 5 plain-text stub — assert the
+    // real content type and a few recognizable step markers (ids the wizard's own JS
+    // keys off of, plus each step's visible label) rather than just assertOk().
+    test()->get('http://erp.example.test/install')
+        ->assertOk()
+        ->assertHeader('Content-Type', 'text/html; charset=UTF-8')
+        ->assertSee('data-step="requirements"', false)
+        ->assertSee('data-step="database"', false)
+        ->assertSee('data-step="migrate"', false)
+        ->assertSee('data-step="tenant"', false)
+        ->assertSee('data-step="admin"', false)
+        ->assertSee('data-step="finalize"', false)
+        ->assertSee('Requirements')
+        ->assertSee('Database')
+        ->assertSee('Migrate')
+        ->assertSee('Tenant')
+        ->assertSee('Admin')
+        ->assertSee('Finish');
 });
 
 it('404s the installer once locked', function () {

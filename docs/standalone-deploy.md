@@ -172,18 +172,32 @@ worker process to supervise on shared hosting:
    introduced by a later update still needs this one CLI step today. Giving
    updates the same "roll it in automatically" treatment as fresh install is
    Phase 9 roadmap.
-3. **If any third-party addons are installed**, also run:
+3. **If any third-party addons are installed, this step is REQUIRED and the
+   site is DOWN until you run it** (verified in the Phase 8 acceptance
+   drill): the moment the update zip's `vendor/` lands, every route AND
+   every artisan command fatals with
+   `Class "Modules\{Addon}\Providers\...ServiceProvider" not found` — even
+   `zenon:module:doctor` cannot boot. Recovery is one command (it does not
+   boot Laravel, so it always works):
    ```bash
    php bin/composer.phar dump-autoload
    ```
-   The update zip's `vendor/` was built via `composer install` before
-   `modules/thirdparty/` existed in that build, so it has no knowledge of
-   your addons' merged autoload entries (`composer.json`'s
+   Why: the update zip's `vendor/` was built via `composer install` in a
+   staging tree where `modules/thirdparty/` is deliberately empty (that's
+   what keeps your addon *files* safe), so its autoloader has no knowledge
+   of your addons' merged autoload entries (`composer.json`'s
    `merge-plugin.include` picks up `modules/thirdparty/*/composer.json`).
-   The bundled `bin/composer.phar` (shipped in every zip) makes this work
-   with no system-wide Composer. Addons that were installed via
+   The bundled `bin/composer.phar` (shipped in every zip) makes the fix work
+   with no system-wide Composer. Addons installed via
    `zenon:module:install-zip` already had this run for them at install time —
-   this step only matters after an update replaces `vendor/`.
+   this only matters after an update replaces `vendor/`.
+
+   > **No SSH / panel-only hosting?** Do not apply update zips while
+   > third-party addons are installed unless your panel offers a way to run
+   > the command above (Plesk "Run a command" scheduled task, cPanel cron
+   > with a one-shot schedule, or a terminal feature). Plan the update for a
+   > maintenance window either way — the outage lasts from extraction until
+   > the command runs. The Phase 9 web update-finalizer will close this gap.
 4. If you rely on `config:cache`/`route:cache` in production, re-run them —
    `bootstrap/cache/` ships skeleton-only in every zip, so cached artifacts
    from before the update are left untouched, not automatically refreshed.

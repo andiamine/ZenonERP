@@ -12,15 +12,17 @@ use ZipArchive;
  * of duplicating the walk. Zip entries always use forward slashes, matching the
  * ZipArchive convention regardless of the host's DIRECTORY_SEPARATOR.
  *
- * Two independent exclusion mechanisms, both checked against DIRECTORIES only (never
- * files) so a file named e.g. `.git` can't accidentally match:
- * - `excludedDirNames`: basename match at ANY depth (`node_modules`, `.git`, `tests`)
- *   — what the original addon packager needed.
- * - `excludedRelativePaths`: a normalized forward-slash path measured from the
- *   addTree() ROOT (`$dir`), independent of `$prefix` and of nesting depth — what the
- *   release packager needs (`public/hot`, `modules/thirdparty`). This is deliberately
- *   NOT matched against the zip entry name: a prefix must only change where content
- *   lands in the archive, never what gets excluded.
+ * Two independent exclusion mechanisms with DIFFERENT scopes:
+ * - `excludedDirNames`: DIRECTORY-ONLY basename match at ANY depth (`node_modules`,
+ *   `.git`, `tests`) — what the original addon packager needed. Never matched against
+ *   files, so a file literally named e.g. `tests` is never excluded by this mechanism.
+ * - `excludedRelativePaths`: matched against BOTH directories and files, as a
+ *   normalized forward-slash path measured from the addTree() ROOT (`$dir`),
+ *   independent of `$prefix` and of nesting depth — what the release packager needs
+ *   (`public/hot`, a FILE — the Vite dev-server marker — as well as directories like
+ *   `modules/thirdparty`). This is deliberately NOT matched against the zip entry
+ *   name: a prefix must only change where content lands in the archive, never what
+ *   gets excluded.
  */
 final class ZipBuilder
 {
@@ -43,7 +45,7 @@ final class ZipBuilder
      */
     public function addTree(string $dir, string $prefix = '', array $excludedDirNames = [], array $excludedRelativePaths = []): self
     {
-        $this->addDirectory($dir, $prefix, '', $excludedDirNames, $this->normalizeRelativePaths($excludedRelativePaths));
+        $this->addDirectory($dir, trim(str_replace('\\', '/', $prefix), '/'), '', $excludedDirNames, $this->normalizeRelativePaths($excludedRelativePaths));
 
         return $this;
     }
@@ -77,6 +79,10 @@ final class ZipBuilder
 
                 $this->addDirectory($fullPath, $zipEntry, $relativeEntry, $excludedDirNames, $excludedRelativePaths);
 
+                continue;
+            }
+
+            if (in_array($relativeEntry, $excludedRelativePaths, true)) {
                 continue;
             }
 

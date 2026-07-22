@@ -101,3 +101,54 @@ it('anchors excludedRelativePaths to the addTree root, not to the zip entry (pre
     expect($names)->toContain('wrapper/sub/keep.txt')
         ->not->toContain('wrapper/sub/skip-me/file.txt');
 });
+
+it('excludes a FILE by relative path (e.g. public/hot) while a same-basename file elsewhere is kept', function () {
+    File::ensureDirectoryExists($this->root.'/public');
+    File::ensureDirectoryExists($this->root.'/other');
+    File::put($this->root.'/public/hot', 'excluded');
+    File::put($this->root.'/other/hot', 'kept');
+
+    $zipPath = $this->outDir.'/relative-path-file.zip';
+
+    ZipBuilder::create($zipPath)
+        ->addTree($this->root, '', [], ['public/hot'])
+        ->close();
+
+    $names = zipBuilderEntryNames($zipPath);
+
+    expect($names)->toContain('other/hot')
+        ->not->toContain('public/hot');
+});
+
+it('does not exclude a file whose basename matches an excludedDirNames entry (directory-only semantic)', function () {
+    File::ensureDirectoryExists($this->root.'/sub');
+    File::put($this->root.'/sub/tests', 'a file literally named tests');
+
+    $zipPath = $this->outDir.'/dir-name-file.zip';
+
+    ZipBuilder::create($zipPath)
+        ->addTree($this->root, '', ['tests'])
+        ->close();
+
+    $names = zipBuilderEntryNames($zipPath);
+
+    expect($names)->toContain('sub/tests');
+});
+
+it('normalizes a trailing-slash prefix so entries do not get a doubled slash', function () {
+    File::put($this->root.'/file.txt', 'contents');
+
+    $zipPath = $this->outDir.'/trailing-slash-prefix.zip';
+
+    ZipBuilder::create($zipPath)
+        ->addTree($this->root, 'wrapper/')
+        ->close();
+
+    $names = zipBuilderEntryNames($zipPath);
+
+    expect($names)->toContain('wrapper/file.txt');
+
+    foreach ($names as $name) {
+        expect($name)->not->toContain('//');
+    }
+});

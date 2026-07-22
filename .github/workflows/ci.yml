@@ -51,3 +51,126 @@ jobs:
       - run: npm run lint
 
       - run: npm run build
+
+  # Builds a real release zip end to end (CLAUDE.md §7/§12 Phase 8 Task 12/13). This is
+  # the ONLY place a REAL staged `composer install --no-dev` runs automatically (wikimedia/
+  # composer-merge-plugin resolving modules/{zenon,thirdparty}/*/composer.json globs against
+  # a staged tree with Demo absent) — nothing here is faked. Independent of `quality` and
+  # `frontend`: it redoes their setup (PHP/Node/build) itself rather than `needs:`-chaining,
+  # since a checkout job has no artifacts to inherit and staying parallel is faster.
+  release-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl, pdo_sqlite, zip
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Produces public/build/manifest.json — one of the packager's hard preflights.
+      - run: npm run build
+
+      # Dev deps too (not --no-dev): this vendor/ runs `php artisan` on the RUNNER, it is
+      # never shipped — the packager stages its OWN --no-dev vendor/ separately, inside the
+      # zip. Mirrors the `quality` job's install exactly.
+      - run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Prepare app environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      # The packager preflight-requires a bundled composer.phar (config('zenon.composer.
+      # phar_path'), default bin/composer.phar, gitignored, never downloaded automatically)
+      # so a bare Plesk/cPanel host can install addon zips with no system Composer. CI
+      # supplies it by copying the very composer setup-php just installed.
+      - name: Bundle composer.phar for the packager
+        run: |
+          mkdir -p bin
+          cp "$(command -v composer)" bin/composer.phar
+
+      - name: Package full release zip
+        run: php artisan zenon:release:package
+
+      - name: Package update release zip
+        run: php artisan zenon:release:package --update
+
+      # unzip -Z1 (zipinfo names-only mode) lists exactly one archive path per line, so
+      # `grep -qx` below does an EXACT full-path match — critical for `.env` vs
+      # `.env.example`, which would both match a naive `grep -q '.env'`.
+      - name: Spot-check the full release zip
+        run: |
+          FULL_ZIP=$(find storage/app/releases -maxdepth 1 -name 'zenonerp-*.zip' ! -name '*-update.zip')
+
+          if [ -z "$FULL_ZIP" ]; then
+            echo "FAIL: no full release zip found in storage/app/releases"
+            exit 1
+          fi
+
+          echo "Inspecting $FULL_ZIP"
+          NAMES=$(unzip -Z1 "$FULL_ZIP")
+
+          if ! echo "$NAMES" | grep -qx 'vendor/autoload.php'; then
+            echo "FAIL: full zip is missing vendor/autoload.php"
+            exit 1
+          fi
+
+          if ! echo "$NAMES" | grep -qx 'public/build/manifest.json'; then
+            echo "FAIL: full zip is missing public/build/manifest.json"
+            exit 1
+          fi
+
+          if ! echo "$NAMES" | grep -qx '.env'; then
+            echo "FAIL: full zip is missing .env"
+            exit 1
+          fi
+
+          if ! echo "$NAMES" | grep -qx 'bin/composer.phar'; then
+            echo "FAIL: full zip is missing bin/composer.phar"
+            exit 1
+          fi
+
+          if echo "$NAMES" | grep -q '^modules/thirdparty/Demo/'; then
+            echo "FAIL: full zip must not ship modules/thirdparty/Demo/ (clean product release)"
+            exit 1
+          fi
+
+          if echo "$NAMES" | grep -q '^storage/app/zenon-tmp'; then
+            echo "FAIL: full zip must not ship the packager's own staging directory"
+            exit 1
+          fi
+
+          echo "Full release zip checks passed."
+
+      - name: Spot-check the update release zip
+        run: |
+          UPDATE_ZIP=$(find storage/app/releases -maxdepth 1 -name 'zenonerp-*-update.zip')
+
+          if [ -z "$UPDATE_ZIP" ]; then
+            echo "FAIL: no update release zip found in storage/app/releases"
+            exit 1
+          fi
+
+          echo "Inspecting $UPDATE_ZIP"
+          NAMES=$(unzip -Z1 "$UPDATE_ZIP")
+
+          if echo "$NAMES" | grep -q '^modules/thirdparty/'; then
+            echo "FAIL: update zip must not ship modules/thirdparty/ at all"
+            exit 1
+          fi
+
+          if echo "$NAMES" | grep -qx '.env'; then
+            echo "FAIL: update zip must not ship .env"
+            exit 1
+          fi
+
+          echo "Update release zip checks passed."

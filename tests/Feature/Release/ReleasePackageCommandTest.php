@@ -1,5 +1,6 @@
 <?php
 
+use App\Foundation\Release\ReleasePackager;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
@@ -103,6 +104,29 @@ function buildReleaseSourceFixture(string $root): void
     File::ensureDirectoryExists($root.'/storage/logs');
     File::put($root.'/storage/logs/.gitignore', "*\n!.gitignore\n");
     File::put($root.'/storage/logs/laravel.log', "[2026-07-22] production.ERROR: decoy log line\n");
+
+    // --- storage/framework/installed.lock: the installer's completion marker — must
+    // survive an update untouched (it is never even a candidate for the zip: the
+    // skeleton-only rule already strips every non-.gitignore file under storage/**, this
+    // decoy locks that guarantee down explicitly for the one file whose presence in a
+    // release zip would be actively dangerous, not just noise) ---
+    File::ensureDirectoryExists($root.'/storage/framework');
+    File::put($root.'/storage/framework/installed.lock', "installed-at=2026-07-22T00:00:00Z\n");
+
+    // --- storage/app/zenon-tmp: the packager's OWN staging root now that staging is
+    // derived from source_root (see ReleasePackager::package()) — a stale leftover
+    // directory tree from a crashed prior run (planted here) AND the staging directory
+    // the pipeline itself creates for the CURRENTLY-RUNNING pack (self-inclusion) must
+    // both be pruned from the walk entirely, never merely filtered file-by-file ---
+    File::ensureDirectoryExists($root.'/storage/app/zenon-tmp/release-stale/foo');
+    File::put($root.'/storage/app/zenon-tmp/release-stale/foo/.gitignore', "*\n!.gitignore\n");
+
+    // --- storage/app/releases: the out_dir CONFIG DEFAULT — these tests point --out
+    // elsewhere, but the relative path is walked whenever zenon.release.out_dir is left
+    // at its default (storage_path('app/releases')) in production, so old zips' sibling
+    // .gitignore files must never leak in either ---
+    File::ensureDirectoryExists($root.'/storage/app/releases');
+    File::put($root.'/storage/app/releases/.gitignore', "*\n!.gitignore\n");
 
     // --- bootstrap/ (bootstrap/cache/ emptied except .gitignore; bootstrap/*.php kept) ---
     File::ensureDirectoryExists($root.'/bootstrap/cache');
@@ -315,4 +339,79 @@ it('--allow-dirty proceeds past a dirty working tree and still produces a zip', 
 
     $zipPath = $this->outDir.'/zenonerp-'.config('zenon.platform_version').'.zip';
     expect(is_file($zipPath))->toBeTrue();
+});
+
+/*
+ * Regression coverage for the review finding: staging is now derived from source_root
+ * (base_path() in production), which means it genuinely sits INSIDE the storage/ root
+ * this pipeline walks. Without pruning storage/app/zenon-tmp (self-inclusion + stale
+ * crashed-run leftovers) and storage/app/releases (the out_dir default — old zips'
+ * sibling .gitignore files) from DESCENT, every real release zip would ship junk
+ * `storage/app/zenon-tmp/release-<uniqid>/.../.gitignore` entries.
+ */
+
+it('never ships the packager\'s own staging subtree or the out_dir-default subtree, including a stale leftover', function () {
+    fakeReleaseProcesses();
+
+    $this->artisan('zenon:release:package', ['--out' => $this->outDir])
+        ->assertSuccessful();
+
+    $zipPath = $this->outDir.'/zenonerp-'.config('zenon.platform_version').'.zip';
+    $names = releaseZipEntryNames($zipPath);
+
+    // Direct reproduction: staging now lives inside the fixture source root during the
+    // run, so absolutely no entry may reference either subtree, at any depth.
+    foreach ($names as $name) {
+        expect($name)->not->toContain('storage/app/zenon-tmp')
+            ->not->toContain('storage/app/releases');
+    }
+
+    // The specific planted decoys (a stale crashed-run leftover, and an old zip's
+    // sibling .gitignore) must never ship either.
+    expect($names)->not->toContain('storage/app/zenon-tmp/release-stale/foo/.gitignore')
+        ->not->toContain('storage/app/releases/.gitignore');
+});
+
+it('never ships storage/framework/installed.lock (the installer-completion lock must survive every update)', function () {
+    fakeReleaseProcesses();
+
+    $this->artisan('zenon:release:package', ['--out' => $this->outDir])
+        ->assertSuccessful();
+
+    $zipPath = $this->outDir.'/zenonerp-'.config('zenon.platform_version').'.zip';
+    $names = releaseZipEntryNames($zipPath);
+
+    expect($names)->not->toContain('storage/framework/installed.lock');
+});
+
+it('throws on a mid-pipeline composer failure and leaves no new staging dir behind (finally cleanup)', function () {
+    $zenonTmp = $this->sourceRoot.'/storage/app/zenon-tmp';
+    $before = array_values(array_filter(
+        scandir($zenonTmp) ?: [],
+        fn ($entry) => str_starts_with($entry, 'release-'),
+    ));
+
+    Process::fake(function ($process) {
+        $command = $process->command;
+
+        if (is_array($command) && ($command[0] ?? null) === 'git') {
+            return Process::result(output: '');
+        }
+
+        // The composer install invocation — force a failure, never touching
+        // vendor/autoload.php, so installVendor()'s failure branch fires.
+        return Process::result(exitCode: 1, errorOutput: 'composer install failed (fixture-forced failure)');
+    });
+
+    expect(fn () => app(ReleasePackager::class)->package(outDir: $this->outDir))
+        ->toThrow(RuntimeException::class);
+
+    $after = array_values(array_filter(
+        scandir($zenonTmp) ?: [],
+        fn ($entry) => str_starts_with($entry, 'release-'),
+    ));
+
+    // Only the pre-existing "release-stale" decoy remains — no NEW release-* dir from
+    // this failed run survived, proving the `finally` cleanup ran.
+    expect($after)->toBe($before);
 });

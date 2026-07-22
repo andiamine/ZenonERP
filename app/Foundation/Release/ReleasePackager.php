@@ -63,12 +63,28 @@ final class ReleasePackager
 
     /**
      * Root-relative (forward-slash) paths excluded wholesale, whether the entry turns
-     * out to be a file, a directory, or (on the real repo) a symlink: `public/hot` is
-     * the Vite dev-server marker FILE; `public/storage` is the `storage:link` symlink —
-     * neither belongs in a release, and both would otherwise dangle or mislead on a
-     * fresh extract.
+     * out to be a file, a directory, or (on the real repo) a symlink — checked BEFORE
+     * the is_dir() branch in {@see self::copyFiltered()}, so a directory listed here is
+     * pruned from DESCENT entirely (never scanned, never recursed into), not merely
+     * filtered file-by-file once inside:
+     *  - `public/hot` is the Vite dev-server marker FILE; `public/storage` is the
+     *    `storage:link` symlink — neither belongs in a release, and both would
+     *    otherwise dangle or mislead on a fresh extract.
+     *  - `storage/app/zenon-tmp` is THIS PIPELINE'S OWN staging root (staging is now
+     *    rooted at $sourceRoot — see {@see self::package()} — so in production, where
+     *    source_root = base_path(), it is genuinely nested inside the storage/ tree
+     *    being walked here). Without this exclusion the currently-running staging
+     *    directory would recurse into itself while still being populated
+     *    (self-inclusion), and any `release-<uniqid>` leftovers from a crashed prior run
+     *    would get walked too — either way, real zips would ship junk
+     *    `storage/app/zenon-tmp/release-<uniqid>/…/.gitignore` entries (the storage
+     *    skeleton-only rule in {@see self::isSkeletonOnlyPath()} only filters FILES,
+     *    not descent, and explicitly lets `.gitignore`-named files through).
+     *  - `storage/app/releases` is the `zenon.release.out_dir` CONFIG DEFAULT: when an
+     *    operator doesn't override `--out`, prior release zips accumulate there — old
+     *    zips' sibling `.gitignore` files (if any) must never leak into a new zip either.
      */
-    private const EXCLUDED_RELATIVE_PATHS = ['public/hot', 'public/storage'];
+    private const EXCLUDED_RELATIVE_PATHS = ['public/hot', 'public/storage', 'storage/app/zenon-tmp', 'storage/app/releases'];
 
     public function __construct(private readonly ComposerRunner $composer) {}
 
@@ -81,7 +97,17 @@ final class ReleasePackager
         $pharPath = $this->assertPharPresent();
         $warnings = $this->assertGitClean($sourceRoot, $allowDirty);
 
-        $staging = storage_path('app/zenon-tmp/release-'.uniqid('', true));
+        // Staging is rooted at $sourceRoot (NOT the real storage_path()) so that in
+        // PRODUCTION — where source_root = base_path() — it lands at the exact same
+        // path (base_path().'/storage/app/zenon-tmp/release-*' === storage_path('app/
+        // zenon-tmp/release-*')), while in TESTS it genuinely lives inside the fixture
+        // tree being walked, matching production geometry instead of hiding it. This is
+        // precisely why stageRootDirs()'s storage/ walk MUST prune descent into
+        // storage/app/zenon-tmp (see EXCLUDED_RELATIVE_PATHS below) — without that
+        // exclusion, staging would recursively copy itself into itself while the walk is
+        // still in flight (self-inclusion), and any `storage/app/zenon-tmp/release-*`
+        // leftovers from a crashed prior run would get walked too.
+        $staging = $sourceRoot.'/storage/app/zenon-tmp/release-'.uniqid('', true);
 
         try {
             File::ensureDirectoryExists($staging);

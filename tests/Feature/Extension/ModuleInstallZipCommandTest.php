@@ -13,7 +13,27 @@ use Illuminate\Support\Facades\Process;
  * dump-autoload` is always Process::fake()d — the zip-shipped provider class becomes
  * resolvable in-process purely via AddonZipInstaller's live-loader patch, which is exactly
  * the mechanism under test.
+ *
+ * Phase 8 Task 9: dump-autoload now runs through ComposerRunner, which may emit either an
+ * ARRAY command `[php, phar, 'dump-autoload']` (bundled composer.phar present) or the
+ * STRING `'composer dump-autoload'` (dev-machine fallback) depending on whether
+ * config('zenon.composer.phar_path') exists on disk — this suite never configures a phar,
+ * so the string form is what actually runs here, but the assertions below match BOTH
+ * shapes (closure form over `$process->command`, string or array) so they don't quietly
+ * start passing for the wrong reason if that default ever changes.
  */
+function assertComposerDumpAutoloadRan(): void
+{
+    Process::assertRan(function ($process) {
+        $command = $process->command;
+
+        if (is_array($command)) {
+            return in_array('dump-autoload', $command, true);
+        }
+
+        return str_contains((string) $command, 'dump-autoload');
+    });
+}
 
 beforeEach(function () {
     $this->tmpTarget = storage_path('framework/testing/install-zip-target-'.uniqid());
@@ -138,7 +158,7 @@ it('installs a root-level zip: extracts files, creates the central module row, r
 
     expect(InstalledModule::query()->where('alias', 'zipdemo')->exists())->toBeTrue();
 
-    Process::assertRan('composer dump-autoload');
+    assertComposerDumpAutoloadRan();
 });
 
 it('resolves a path given relative to base_path()', function () {
@@ -228,7 +248,7 @@ it('installs a remote-declaring addon whose platform the SPA loader can evaluate
     expect(is_file($this->tmpTarget.'/Zipdemo/module.json'))->toBeTrue();
     expect(InstalledModule::query()->where('alias', 'zipdemo')->exists())->toBeTrue();
 
-    Process::assertRan('composer dump-autoload');
+    assertComposerDumpAutoloadRan();
 });
 
 it('passes preflight for a backend-only addon (no remote frontend) using a platform constraint outside the loader grammar', function () {
@@ -421,5 +441,5 @@ it('rolls back the extracted target directory when composer dump-autoload fails'
     expect(is_dir($this->tmpTarget.'/Zipdemo'))->toBeFalse();
     expect(InstalledModule::query()->where('alias', 'zipdemo')->exists())->toBeFalse();
 
-    Process::assertRan('composer dump-autoload');
+    assertComposerDumpAutoloadRan();
 });

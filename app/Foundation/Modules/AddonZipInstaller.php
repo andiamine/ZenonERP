@@ -2,10 +2,10 @@
 
 namespace App\Foundation\Modules;
 
+use App\Foundation\Support\ComposerRunner;
 use Composer\Autoload\ClassLoader;
 use Composer\Semver\Semver;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Process;
 use Nwidart\Modules\Contracts\RepositoryInterface;
 use Nwidart\Modules\FileRepository;
 use RuntimeException;
@@ -39,6 +39,7 @@ final class AddonZipInstaller
         private readonly ModuleManager $manager,
         private readonly ModuleRegistry $registry,
         private readonly RepositoryInterface $modules,
+        private readonly ComposerRunner $composer,
     ) {}
 
     /**
@@ -345,7 +346,7 @@ final class AddonZipInstaller
 
     private function dumpAutoload(string $target): void
     {
-        $result = Process::path(base_path())->run('composer dump-autoload');
+        $result = $this->composer->run(base_path(), ['dump-autoload']);
 
         if ($result->failed()) {
             throw new RuntimeException(sprintf(

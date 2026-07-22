@@ -2,16 +2,19 @@
 
 namespace App\Console\Commands;
 
+use App\Foundation\Support\ZipBuilder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use ZipArchive;
+use RuntimeException;
 
 /**
  * Packages a folder under {@see config('zenon.thirdparty_path')} into a distributable zip
  * for `zenon:module:install-zip` (CLAUDE.md §7/§12 Phase 7 Task 8) — the packaging half of
  * the zip pipeline the acceptance flow exercises against the Demo addon. Zip contents sit
- * at the archive ROOT (module.json top-level, no wrapper directory).
+ * at the archive ROOT (module.json top-level, no wrapper directory). The recursive walk
+ * itself lives in {@see ZipBuilder} (Phase 8 Task 8 extraction) — this command only owns
+ * the addon-specific validation and the exclusion list.
  */
 class ModulePackageCommand extends Command
 {
@@ -84,45 +87,19 @@ class ModulePackageCommand extends Command
         $zipName = sprintf('%s-%s-%s.zip', $vendor, Str::lower($manifestName), $version);
         $zipPath = rtrim($outDir, '/\\').DIRECTORY_SEPARATOR.$zipName;
 
-        $zip = new ZipArchive;
-
-        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            $this->components->error(sprintf('Could not create zip at [%s].', $zipPath));
+        try {
+            $zip = ZipBuilder::create($zipPath);
+        } catch (RuntimeException $exception) {
+            $this->components->error($exception->getMessage());
 
             return self::FAILURE;
         }
 
-        $this->addDirectory($zip, $source, '');
+        $zip->addTree($source, '', self::EXCLUDED_DIRS);
         $zip->close();
 
         $this->components->info(sprintf('Packaged [%s] to [%s].', $name, $zipPath));
 
         return self::SUCCESS;
-    }
-
-    private function addDirectory(ZipArchive $zip, string $dir, string $zipPrefix): void
-    {
-        $entries = scandir($dir) ?: [];
-
-        foreach ($entries as $entry) {
-            if ($entry === '.' || $entry === '..') {
-                continue;
-            }
-
-            $fullPath = $dir.DIRECTORY_SEPARATOR.$entry;
-            $zipEntry = $zipPrefix === '' ? $entry : $zipPrefix.'/'.$entry;
-
-            if (is_dir($fullPath)) {
-                if (in_array($entry, self::EXCLUDED_DIRS, true)) {
-                    continue;
-                }
-
-                $this->addDirectory($zip, $fullPath, $zipEntry);
-
-                continue;
-            }
-
-            $zip->addFile($fullPath, $zipEntry);
-        }
     }
 }

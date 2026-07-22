@@ -59,6 +59,36 @@ final class ModuleRegistry
     }
 
     /**
+     * Discovered modules physically rooted under the nwidart PRIMARY path
+     * (`modules.paths.modules` = `modules/zenon/` — CLAUDE.md "Module identity &
+     * distribution": "First-party ships in modules/zenon/... = product") — as opposed to
+     * third-party/scan-path modules (`modules/thirdparty/*` in production; the
+     * test-fixture scan path `tests/Fixtures/modules/*` only in APP_ENV=testing, see
+     * config/modules.php `scan.paths`). Deliberately keyed on physical location, not
+     * `frontend.entry`/`frontend.remote`: fixture modules under the test scan path set
+     * `frontend.entry` too (to exercise the bundled-module lifecycle from a non-primary
+     * path), so that signal alone would misclassify them as first-party.
+     *
+     * Consumed by the standalone installer's migrate step (Phase 8): a fresh extract has
+     * no other code path that installs modules before the Tenant step, so it installs
+     * every module this method returns, and only those.
+     *
+     * @return array<string, ManifestData>
+     */
+    public function discoveredFirstParty(): array
+    {
+        $primaryPath = rtrim(str_replace('\\', '/', (string) config('modules.paths.modules')), '/');
+
+        return array_filter(
+            $this->discovered(),
+            fn (ManifestData $manifest): bool => str_starts_with(
+                rtrim(str_replace('\\', '/', $manifest->path), '/'),
+                $primaryPath.'/',
+            ),
+        );
+    }
+
+    /**
      * Installed = central `modules` rows ∩ discovered manifests, keyed by alias.
      *
      * @return array<string, ManifestData>

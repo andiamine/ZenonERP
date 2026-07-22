@@ -1,6 +1,7 @@
 <?php
 
 use App\Foundation\Installer\InstallerState;
+use App\Foundation\Modules\Models\InstalledModule;
 use App\Foundation\Modules\Models\TenantModule;
 use App\Models\Tenant;
 use App\Models\User;
@@ -183,13 +184,11 @@ function installerFlowWalk(): void
     expect(Schema::hasTable('tenants'))->toBeTrue()
         ->and(Schema::hasTable('tenant_modules'))->toBeTrue();
 
-    // A production release zip ships with first-party modules already installed by the
-    // deploy pipeline (zenon:module:install) — the wizard never installs modules itself,
-    // only enables already-installed ones for the tenant it provisions. Replicate that
-    // pre-existing state now that the central schema exists to hold it.
-    installModule('core');
-    installModule('sequence');
-    installModule('audit');
+    // The migrate step now installs every discovered first-party module itself (central
+    // `modules` rows) — a genuinely fresh extract has no other code path that does this,
+    // and the wizard must complete with no shell access. Prove it landed before moving on.
+    expect(InstalledModule::query()->pluck('alias')->sort()->values()->all())
+        ->toBe(['audit', 'core', 'sequence']);
 
     installerFlowGet('/install/api/status')->assertJson(['data' => ['steps' => [
         'database' => true, 'migrate' => true, 'tenant' => false, 'admin' => false, 'finalize' => false,
@@ -237,13 +236,17 @@ function installerFlowWalk(): void
         'database' => true, 'migrate' => true, 'tenant' => true, 'admin' => true, 'finalize' => false,
     ]]]);
 
-    // --- resume safety: re-POST database/tenant/admin, no dupes, no errors ----------
+    // --- resume safety: re-POST database/migrate/tenant/admin, no dupes, no errors ---
     installerFlowPost('/install/api/database', $databasePayload)->assertOk();
+    installerFlowPost('/install/api/migrate')->assertOk()->assertJson(['data' => ['migrated' => true]]);
     installerFlowPost('/install/api/tenant', ['name' => 'Acme Co'])->assertOk();
     installerFlowPost('/install/api/admin', $adminPayload)->assertOk();
 
     expect(Tenant::query()->count())->toBe(1)
         ->and($tenant->domains()->count())->toBe(1);
+
+    expect(InstalledModule::query()->pluck('alias')->sort()->values()->all())
+        ->toBe(['audit', 'core', 'sequence']); // re-POST of migrate installed nothing new
 
     expect(TenantModule::query()->where('tenant_id', 'default')->where('enabled', true)->count())->toBe(3);
 

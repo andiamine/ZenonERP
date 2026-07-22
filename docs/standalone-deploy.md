@@ -35,10 +35,9 @@ be fixed first; anything marked **warning** is surfaced but doesn't stop you:
   release zip carries prebuilt `public/build/` assets and a `--no-dev`
   `vendor/` tree, plus a bundled `bin/composer.phar` for the one addon-related
   case that still needs Composer (see [Installing addons](#installing-addons)).
-  SSH/terminal access is not required for routine operation — cron is
-  configured through your panel's UI — but **one one-time terminal command is
-  currently needed during first install**; see the callout in the next
-  section.
+  **SSH/terminal access is not required at all** — cron is configured through
+  your panel's UI, and the wizard's Migrate step installs the release's
+  first-party modules itself (see [Install](#install-on-pleskcpanel) below).
 
 ## Install on Plesk/cPanel
 
@@ -70,28 +69,13 @@ be fixed first; anything marked **warning** is surfaced but doesn't stop you:
    (`APP_KEY`, DB credentials, `ZENON_MODE=standalone`) only after it
    successfully connects to *both* databases; every step is safe to re-POST if
    the browser is closed mid-wizard (the wizard resumes from `GET
-   /install/api/status`).
-
-   > **One-time terminal step, between Migrate and Tenant.** The wizard's
-   > Migrate step only creates the platform's central schema
-   > (`tenants`/`domains`/`modules`/`tenant_modules`/`jobs`/`cache`/`sessions`)
-   > — it does not register the bundled modules themselves. The Tenant/Admin
-   > steps enable modules for the new tenant but require them to already be
-   > registered centrally first. On a genuinely fresh database, run once
-   > (SSH, or your panel's Scheduled Tasks/Cron UI set to fire immediately if
-   > you have no shell access):
-   > ```bash
-   > cd /path/to/zenonerp
-   > php artisan zenon:module:install core
-   > php artisan zenon:module:install sequence
-   > php artisan zenon:module:install audit
-   > ```
-   > (`core` is always required; `sequence`/`audit` match
-   > `config('zenon.default_modules')` in the shipped `config/zenon.php` —
-   > run `php artisan zenon:module:list` to see everything the release
-   > ships.) Then continue the wizard from Tenant. Skipping this step lets
-   > Tenant complete with **zero** modules enabled and the Admin step then
-   > fails with `Module [core] is not installed.`
+   /install/api/status`). The Migrate step creates the platform's central
+   schema (`tenants`/`domains`/`modules`/`tenant_modules`/`jobs`/`cache`/
+   `sessions`) **and** installs every first-party module the release ships
+   (central `modules` rows — everything under `modules/zenon/` in this
+   build) in the same request, so the Tenant/Admin steps that follow always
+   have something to enable. No terminal access, no separate CLI step —
+   the wizard alone is enough on a genuinely fresh extract.
 
 ## Cron
 
@@ -153,6 +137,24 @@ worker process to supervise on shared hosting:
    drained automatically by the next cron tick (see [Cron](#cron)). Re-run
    `zenon:module:doctor` afterward to confirm it converges to "All modules
    healthy".
+
+   **If the update zip adds a brand-new first-party module** (one that
+   didn't exist in your previous install — check the release notes),
+   `zenon:module:doctor` won't mention it: doctor only walks modules that
+   already have a central `modules` row, and a module your install has
+   never seen has none yet. Install it once, then enable it per tenant
+   (`default` on standalone):
+   ```bash
+   php artisan zenon:module:install {alias}
+   php artisan zenon:module:enable {alias} --tenant=default
+   ```
+   This is a genuinely different situation from first install — the
+   `/install` wizard's Migrate step (see [Install](#install-on-pleskcpanel))
+   installs every first-party module the release ships **at that point in
+   time**; it never runs again on an already-installed site, so a module
+   introduced by a later update still needs this one CLI step today. Giving
+   updates the same "roll it in automatically" treatment as fresh install is
+   Phase 9 roadmap.
 3. **If any third-party addons are installed**, also run:
    ```bash
    php bin/composer.phar dump-autoload

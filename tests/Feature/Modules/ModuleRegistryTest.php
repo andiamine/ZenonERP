@@ -38,6 +38,18 @@ it('answers isEnabledForCurrentTenant per context', function () {
     tenancy()->end();
 });
 
+it('discoveredFirstParty() filters to the primary modules/zenon path, not frontend.entry', function () {
+    $registry = app(ModuleRegistry::class);
+
+    $firstParty = array_keys($registry->discoveredFirstParty());
+
+    // zenon/core, zenon/sequence, zenon/audit ship under modules/zenon/ in this repo.
+    expect($firstParty)->toContain('core', 'sequence', 'audit')
+        // The 'demo' thirdparty addon and the 'dummy'/'dummycore' test fixtures all
+        // declare frontend.entry too — physical location, not that flag, must decide.
+        ->not->toContain('demo', 'dummy', 'dummycore', 'dummydep');
+});
+
 it('memoizes enablement per request and refreshes after a flush', function () {
     installModule('dummy');
     $acme = createTenant('acme');

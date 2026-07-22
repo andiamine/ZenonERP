@@ -8,6 +8,7 @@ use App\Foundation\Installer\Actions\WriteEnvironment;
 use App\Foundation\Installer\EnvWriter;
 use App\Foundation\Installer\InstallerState;
 use App\Foundation\Installer\RequirementsCheck;
+use App\Foundation\Modules\ModuleRegistry;
 use App\Foundation\Tenancy\Actions\CreateStandaloneTenant;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Installer\AdminStepRequest;
@@ -37,7 +38,7 @@ class InstallerController extends Controller
         return response()->json(['data' => ['ok' => $ok, 'items' => $items]]);
     }
 
-    public function status(InstallerState $state, EnvWriter $envWriter): JsonResponse
+    public function status(InstallerState $state, EnvWriter $envWriter, ModuleRegistry $registry): JsonResponse
     {
         $envPath = (string) (config('zenon.installer.env_path') ?? App::environmentFilePath());
         $env = $envWriter->read($envPath);
@@ -46,7 +47,9 @@ class InstallerController extends Controller
         $migrateDone = false;
 
         try {
-            $migrateDone = Schema::hasTable('tenants');
+            $migrateDone = Schema::hasTable('tenants')
+                && Schema::hasTable('modules')
+                && $this->firstPartyModulesInstalled($registry);
         } catch (Throwable) {
             $migrateDone = false;
         }
@@ -153,5 +156,19 @@ class InstallerController extends Controller
         $state->markInstalled();
 
         return response()->json(['data' => ['redirect' => '/']]);
+    }
+
+    /**
+     * The migrate step is no longer just "did the schema land" — RunCentralMigrations
+     * now also installs every discovered first-party module in the same request, so a
+     * process killed between the two halves must resurface as migrate:false (not done),
+     * letting a re-POST of /install/api/migrate converge instead of leaving the Tenant
+     * step to silently enable zero modules.
+     */
+    private function firstPartyModulesInstalled(ModuleRegistry $registry): bool
+    {
+        return collect(array_keys($registry->discoveredFirstParty()))
+            ->diff(array_keys($registry->installed()))
+            ->isEmpty();
     }
 }

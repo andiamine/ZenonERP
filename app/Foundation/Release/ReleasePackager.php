@@ -326,8 +326,9 @@ final class ReleasePackager
             }
 
             if ($relPath === 'database' && $this->isExcludedDatabaseFile($entry)) {
-                // database/database.sqlite (local dev DB) and database/zenon_tenant_*
-                // (per-tenant sqlite test artifacts) never belong in a release.
+                // Any *.sqlite* file under database/ — local dev DB, per-tenant sqlite
+                // test artifacts, ad hoc test scratch files — never belongs in a release.
+                // See isExcludedDatabaseFile() for the exact matching rule.
                 continue;
             }
 
@@ -341,9 +342,18 @@ final class ReleasePackager
             || $relPath === 'bootstrap/cache' || str_starts_with($relPath, 'bootstrap/cache/');
     }
 
+    /**
+     * Broadened from two hardcoded names (`database.sqlite`, `zenon_tenant_*`) to match
+     * `database/.gitignore`'s `*.sqlite*` intent: any file with `.sqlite` anywhere in its
+     * name — covers `-journal`/`-wal`/`-shm` sidecars and ad hoc test artifacts (e.g.
+     * `database/phase8_*.sqlite`, the standing installer/tenancy test suites' scratch
+     * files) alike. These are gitignored dev cruft: invisible to the git-clean preflight
+     * ({@see self::assertGitClean()}), so a leftover from a crashed local run would
+     * otherwise ship silently in a release built from that machine.
+     */
     private function isExcludedDatabaseFile(string $entry): bool
     {
-        return $entry === 'database.sqlite' || str_starts_with($entry, 'zenon_tenant_');
+        return str_contains($entry, '.sqlite');
     }
 
     /**

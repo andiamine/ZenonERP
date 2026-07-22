@@ -29,8 +29,10 @@ be fixed first; anything marked **warning** is surfaced but doesn't stop you:
   `bootstrap/cache/`.
 - **Writable, warning only**: `modules/thirdparty/` (only needed once the
   admin addon-upload UI ships — Phase 9/M2 roadmap; CLI install works
-  regardless) and `public/build/manifest.json` existing (a dev/test wizard
-  walkthrough may legitimately run against an unbuilt SPA).
+  regardless).
+- **Existence, warning only**: `public/build/manifest.json` (a dev/test
+  wizard walkthrough may legitimately run against an unbuilt SPA) — this
+  checks the file is present, not that it's writable.
 - **No Node.js, no system Composer** required to install or run: the full
   release zip carries prebuilt `public/build/` assets and a `--no-dev`
   `vendor/` tree, plus a bundled `bin/composer.phar` for the one addon-related
@@ -77,6 +79,16 @@ be fixed first; anything marked **warning** is surfaced but doesn't stop you:
    have something to enable. No terminal access, no separate CLI step —
    the wizard alone is enough on a genuinely fresh extract.
 
+   **Complete the wizard immediately after upload.** Until Finish is clicked
+   (writing `storage/framework/installed.lock`), `/install` is claimable by
+   whoever reaches the URL first — same-origin checking blocks cross-site
+   forgery, not a race to the URL from an ordinary browser.
+
+   **Recovery**: if you need to re-open the wizard after Finish (or after an
+   attempt was interrupted), delete `storage/framework/installed.lock` — via
+   your panel's file manager, or `rm storage/framework/installed.lock` over
+   SSH if available — and `/install` becomes reachable again immediately.
+
 ## Cron
 
 One cron line drives both the scheduler and the queue — there is no separate
@@ -121,6 +133,11 @@ worker process to supervise on shared hosting:
      files left on disk from the previous version are simply never
      referenced again (extraction doesn't delete files absent from the zip,
      but nothing requests them either).
+   - `vendor/` overlays the same way `public/build/` does: the update zip's
+     `composer install --no-dev` output is extracted on top of the existing
+     tree. Extraction never deletes files absent from the new zip, so a
+     package removed between versions leaves stale files on disk — inert,
+     since nothing in the new autoloader references them.
 2. **Finalize** (CLI/SSH; the web update-finalizer is Phase 9 roadmap):
    ```bash
    cd /path/to/zenonerp

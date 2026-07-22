@@ -40,46 +40,8 @@ class InstallerController extends Controller
 
     public function status(InstallerState $state, EnvWriter $envWriter, ModuleRegistry $registry): JsonResponse
     {
-        $envPath = (string) (config('zenon.installer.env_path') ?? App::environmentFilePath());
-        $env = $envWriter->read($envPath);
-        $databaseDone = ($env['APP_KEY'] ?? '') !== '';
-
-        $migrateDone = false;
-
-        try {
-            $migrateDone = Schema::hasTable('tenants')
-                && Schema::hasTable('modules')
-                && $this->firstPartyModulesInstalled($registry);
-        } catch (Throwable) {
-            $migrateDone = false;
-        }
-
-        $tenantDone = false;
-
-        if ($migrateDone) {
-            try {
-                $tenantDone = Tenant::query()->count() > 0;
-            } catch (Throwable) {
-                $tenantDone = false;
-            }
-        }
-
-        $adminDone = false;
-
-        if ($tenantDone) {
-            try {
-                $tenant = Tenant::find('default');
-                $adminDone = $tenant !== null && (bool) $tenant->run(fn () => User::query()->exists());
-            } catch (Throwable) {
-                $adminDone = false;
-            }
-        }
-
         return response()->json(['data' => ['steps' => [
-            'database' => $databaseDone,
-            'migrate' => $migrateDone,
-            'tenant' => $tenantDone,
-            'admin' => $adminDone,
+            ...$this->deriveSteps($envWriter, $registry),
             'finalize' => $state->isInstalled(),
         ]]]);
     }
@@ -102,8 +64,17 @@ class InstallerController extends Controller
         return response()->json(['data' => ['written' => true]]);
     }
 
-    public function migrate(RunCentralMigrations $action): JsonResponse
+    public function migrate(RunCentralMigrations $action, EnvWriter $envWriter): JsonResponse
     {
+        if (! $this->isDatabaseStepComplete($envWriter)) {
+            return response()->json([
+                'error' => [
+                    'type' => 'database_step_incomplete',
+                    'message' => 'Run the database step first.',
+                ],
+            ], 422);
+        }
+
         $action->handle();
 
         return response()->json(['data' => ['migrated' => true]]);
@@ -151,20 +122,96 @@ class InstallerController extends Controller
         return response()->json(['data' => ['created' => true]]);
     }
 
-    public function finalize(InstallerState $state): JsonResponse
+    /**
+     * Guarded the same way as the tenant()/admin() steps above (422, same error shape)
+     * rather than left open: the wizard's step nav lets the browser jump straight to
+     * Finish, and Origin/Referer same-origin checking (EnsureInstallerAvailable) only
+     * proves the CALLER is legitimate, not that provisioning actually finished — a bare
+     * POST here before the admin step completes would still write the lock file and
+     * brick a half-provisioned install (404 wizard + broken app, no way back in short of
+     * deleting the lock).
+     */
+    public function finalize(InstallerState $state, EnvWriter $envWriter, ModuleRegistry $registry): JsonResponse
     {
+        if (! $this->deriveSteps($envWriter, $registry)['admin']) {
+            return response()->json([
+                'error' => [
+                    'type' => 'admin_step_incomplete',
+                    'message' => 'Run the admin step first.',
+                ],
+            ], 422);
+        }
+
         $state->markInstalled();
 
         return response()->json(['data' => ['redirect' => '/']]);
     }
 
     /**
+     * Single derivation of database/migrate/tenant/admin step completion, shared by
+     * status() (reports all four) and finalize()'s guard (reads just 'admin') — the two
+     * must never drift apart, or a status() that claims "admin: true" could still be
+     * refused by finalize(), or vice versa.
+     *
      * The migrate step is no longer just "did the schema land" — RunCentralMigrations
      * now also installs every discovered first-party module in the same request, so a
      * process killed between the two halves must resurface as migrate:false (not done),
      * letting a re-POST of /install/api/migrate converge instead of leaving the Tenant
      * step to silently enable zero modules.
+     *
+     * @return array{database: bool, migrate: bool, tenant: bool, admin: bool}
      */
+    private function deriveSteps(EnvWriter $envWriter, ModuleRegistry $registry): array
+    {
+        $databaseDone = $this->isDatabaseStepComplete($envWriter);
+
+        $migrateDone = false;
+
+        try {
+            $migrateDone = Schema::hasTable('tenants')
+                && Schema::hasTable('modules')
+                && $this->firstPartyModulesInstalled($registry);
+        } catch (Throwable) {
+            $migrateDone = false;
+        }
+
+        $tenantDone = false;
+
+        if ($migrateDone) {
+            try {
+                $tenantDone = Tenant::query()->count() > 0;
+            } catch (Throwable) {
+                $tenantDone = false;
+            }
+        }
+
+        $adminDone = false;
+
+        if ($tenantDone) {
+            try {
+                $tenant = Tenant::find('default');
+                $adminDone = $tenant !== null && (bool) $tenant->run(fn () => User::query()->exists());
+            } catch (Throwable) {
+                $adminDone = false;
+            }
+        }
+
+        return [
+            'database' => $databaseDone,
+            'migrate' => $migrateDone,
+            'tenant' => $tenantDone,
+            'admin' => $adminDone,
+        ];
+    }
+
+    private function isDatabaseStepComplete(EnvWriter $envWriter): bool
+    {
+        $envPath = (string) (config('zenon.installer.env_path') ?? App::environmentFilePath());
+        $env = $envWriter->read($envPath);
+
+        return ($env['APP_KEY'] ?? '') !== '';
+    }
+
     private function firstPartyModulesInstalled(ModuleRegistry $registry): bool
     {
         return collect(array_keys($registry->discoveredFirstParty()))

@@ -24,6 +24,11 @@ use RuntimeException;
  * enableForTenant skips already-enabled modules; the domain existence check below). A
  * second call after full success walks the exact same idempotent path, so it is also a
  * safe no-op — "resume" and "already done" are not different cases here.
+ *
+ * Resume ignores differing $name/$dbName arguments by design: once the 'default' tenant
+ * row exists, this method never re-reads or updates it from the call's arguments — only
+ * the idempotent completion steps below re-run. A second call with a different name or
+ * dbName than the first is not treated as a rename/repoint request.
  */
 final class CreateStandaloneTenant
 {

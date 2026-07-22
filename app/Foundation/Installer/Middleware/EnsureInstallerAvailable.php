@@ -47,6 +47,10 @@ final class EnsureInstallerAvailable
 
         abort_if($source === null, 403);
 
+        // HOST-only comparison, deliberately: scheme/port are not narrowed. The threat
+        // model here is browser-CSRF (a cross-SITE page's form/fetch tricking the
+        // installer), which Origin/Referer's host already defeats — a scheme/port
+        // mismatch on the SAME host is not an attacker-controlled variable in that model.
         $sourceHost = parse_url($source, PHP_URL_HOST);
 
         abort_unless(

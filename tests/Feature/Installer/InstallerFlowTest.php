@@ -125,6 +125,68 @@ it('walks the full install wizard end-to-end on sqlite, then resumes safely', fu
     }
 });
 
+it('rejects POST /install/api/migrate with a 422 before the database step is complete', function () {
+    try {
+        installerFlowPost('/install/api/migrate')
+            ->assertStatus(422)
+            ->assertJson(['error' => [
+                'type' => 'database_step_incomplete',
+                'message' => 'Run the database step first.',
+            ]]);
+
+        // Guarded before ever touching the schema — migration truly never ran.
+        expect(Schema::hasTable('tenants'))->toBeFalse();
+    } finally {
+        // Same belt-and-suspenders restore as the main walk test below — see that test's
+        // inline comment and the file docblock for why this must happen here, not just
+        // in the file-level afterEach().
+        config([
+            'database.default' => 'sqlite',
+            'tenancy.database.central_connection' => 'sqlite',
+        ]);
+    }
+});
+
+it('rejects finalize with a 422 and writes no lock file before the admin step is complete', function () {
+    try {
+        $databasePayload = [
+            'app_name' => 'Acme Co',
+            'app_url' => 'http://erp.example.test',
+            'driver' => 'sqlite',
+            'central' => ['database' => 'phase8_installer_central_test.sqlite'],
+            'tenant' => ['database' => 'phase8_installer_tenant_test.sqlite'],
+        ];
+
+        installerFlowPost('/install/api/database', $databasePayload)->assertOk();
+        installerFlowPost('/install/api/migrate')->assertOk();
+        installerFlowPost('/install/api/tenant', ['name' => 'Acme Co'])->assertOk();
+
+        // Admin step deliberately skipped — the wizard's step nav lets the browser jump
+        // straight to Finish; finalize must refuse rather than lock a half-provisioned
+        // install.
+        installerFlowPost('/install/api/finalize')
+            ->assertStatus(422)
+            ->assertJson(['error' => [
+                'type' => 'admin_step_incomplete',
+                'message' => 'Run the admin step first.',
+            ]]);
+
+        expect(File::exists($this->lockPath))->toBeFalse()
+            ->and(app(InstallerState::class)->isInstalled())->toBeFalse();
+
+        // The refusal must not brick the wizard surface — it stays reachable, and status
+        // still reports exactly where the wizard is (admin/finalize both false).
+        installerFlowGet('/install/api/status')->assertOk()->assertJson(['data' => ['steps' => [
+            'database' => true, 'migrate' => true, 'tenant' => true, 'admin' => false, 'finalize' => false,
+        ]]]);
+    } finally {
+        config([
+            'database.default' => 'sqlite',
+            'tenancy.database.central_connection' => 'sqlite',
+        ]);
+    }
+});
+
 function installerFlowWalk(): void
 {
     // --- requirements -------------------------------------------------------------

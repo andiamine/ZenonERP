@@ -91,8 +91,15 @@ return [
         // connection name until the standalone tenant's `tenancy_db_connection`
         // internal is wired up in a later Phase 8 task.
         'standalone' => [
+            // Deliberately 'mysql', not 'mariadb': this template also serves the wizard's
+            // MariaDB choice (pdo_mysql speaks both wire protocols) — a future 'mariadb'
+            // driver template would need a matching tenancy.database.managers entry.
             'driver' => 'mysql',
-            'url' => env('DB_URL'),
+            // No 'url' => env('DB_URL') here (unlike every other connection above):
+            // ConfigurationUrlParser lets a DB_URL override host/database/credentials —
+            // including the `database` key stancl injects from tenancy_db_name — which
+            // would silently repoint the TENANT connection at the CENTRAL database. This
+            // connection is TENANT_DB_*-driven by definition; DB_URL must never apply here.
             'host' => env('TENANT_DB_HOST', env('DB_HOST', '127.0.0.1')),
             'port' => env('TENANT_DB_PORT', env('DB_PORT', '3306')),
             'database' => env('TENANT_DB_DATABASE', env('DB_DATABASE', 'laravel')),

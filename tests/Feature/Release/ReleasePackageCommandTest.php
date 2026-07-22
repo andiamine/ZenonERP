@@ -141,6 +141,11 @@ function buildReleaseSourceFixture(string $root): void
     File::put($root.'/database/migrations/2024_01_01_000000_create_x_table.php', '<?php // fixture migration');
     File::put($root.'/database/database.sqlite', 'binary-ish sqlite decoy');
     File::put($root.'/database/zenon_tenant_default.sqlite', 'binary-ish tenant sqlite decoy');
+    // Regression fixture: a crashed test run's leftover scratch file (e.g. the standing
+    // installer suite's database/phase8_*.sqlite) — gitignored (*.sqlite* in
+    // database/.gitignore), so it's invisible to the git-clean preflight and must be
+    // caught by isExcludedDatabaseFile()'s broadened *.sqlite* matching, not by name.
+    File::put($root.'/database/leftover_test.sqlite', 'binary-ish leftover sqlite decoy');
 
     // --- config/, app/: minimal, just to prove plain inclusion ---
     File::ensureDirectoryExists($root.'/config');
@@ -269,6 +274,7 @@ it('packages a full zip: staged vendor build, phar, .env from .env.standalone, p
             ->not->toBe('bootstrap/cache/services.php')
             ->not->toBe('database/database.sqlite')
             ->not->toBe('database/zenon_tenant_default.sqlite')
+            ->not->toBe('database/leftover_test.sqlite')
             ->not->toStartWith('modules/thirdparty/Demo')
             ->not->toStartWith('tests/')
             ->not->toStartWith('packages/')

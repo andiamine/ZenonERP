@@ -47,3 +47,7 @@ Thumbs.db
 /.claude/
 /database/zenon_tenant_*
 /storage/framework/testing/
+
+# Chrome DevTools/Playwright MCP session output — dev-tooling cruft, not release content;
+# would trip the release packager's git-clean preflight if left untracked and uncommitted.
+/.playwright-mcp/

@@ -2,13 +2,16 @@
 
 use App\Foundation\Api\ApiExceptionRenderer;
 use App\Foundation\Company\SetCurrentCompany;
+use App\Foundation\DeploymentMode;
 use App\Foundation\Installer\Middleware\EnsureInstallerAvailable;
 use App\Foundation\Installer\Middleware\RedirectIfNotInstalled;
 use App\Foundation\Modules\Middleware\EnsureModuleEnabled;
+use App\Foundation\Standalone\StandaloneSchedule;
 use App\Foundation\Tenancy\Middleware\InitializeTenancyByMode;
 use App\Foundation\Tenancy\Middleware\InitializeTenancyOnTenantHosts;
 use App\Http\Controllers\ModuleAssetController;
 use Illuminate\Auth\Middleware\Authorize;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Contracts\Session\Middleware\AuthenticatesSessions;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -139,6 +142,17 @@ return Application::configure(basePath: dirname(__DIR__))
             SubstituteBindings::class,
             Authorize::class,
         ]);
+    })
+    ->withSchedule(function (Schedule $schedule): void {
+        // Standalone-only cron-driven queue drain (CLAUDE.md §7 Phase 8 Task 11).
+        // DeploymentMode::isStandalone() re-reads config('zenon.mode') on every call
+        // (no caching, see the enum's docblock) rather than branching with `&&` on
+        // StandaloneSchedule::register()'s void return — see StandaloneSchedule's
+        // own docblock for why this closure's actual execution timing (deferred
+        // behind Artisan::starting()) matters for how it's tested.
+        if (DeploymentMode::isStandalone()) {
+            StandaloneSchedule::register($schedule);
+        }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // shouldRenderJsonWhen() REPLACES the framework default (Handler::shouldReturnJson()

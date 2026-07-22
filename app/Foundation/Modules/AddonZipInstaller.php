@@ -68,12 +68,20 @@ final class AddonZipInstaller
 
         try {
             [$manifestJson, $prefix] = $this->locateManifest($zip);
+
+            // Read the three configured limits ONCE per install (not re-read per entry,
+            // and the SAME values feed both the pre-scan below and the authoritative
+            // streaming cap in extractTo() — a config change mid-install could otherwise
+            // let the two guards disagree).
+            $limits = $this->declaredLimits();
+            $this->assertWithinDeclaredLimits($zip, $limits);
+
             $manifest = $this->parseManifest($manifestJson, $zipPath);
             ['name' => $name, 'alias' => $alias] = $this->preflight($manifest);
 
             $target = $this->targetPath($name);
 
-            $this->extractTo($zip, $prefix, $temp);
+            $this->extractTo($zip, $prefix, $temp, $limits);
 
             if (! File::moveDirectory($temp, $target)) {
                 throw new RuntimeException(sprintf('Failed to move extracted addon from [%s] to [%s].', $temp, $target));
@@ -236,6 +244,76 @@ final class AddonZipInstaller
     }
 
     /**
+     * @return array{max_entry_bytes: int, max_total_bytes: int, max_entries: int}
+     */
+    private function declaredLimits(): array
+    {
+        return [
+            'max_entry_bytes' => (int) config('zenon.addon_zip.max_entry_bytes'),
+            'max_total_bytes' => (int) config('zenon.addon_zip.max_total_bytes'),
+            'max_entries' => (int) config('zenon.addon_zip.max_entries'),
+        ];
+    }
+
+    /**
+     * Pre-scan (CLAUDE.md §7/§12 Phase 8 Task 10 — Phase 7 carry-forward b): cheap,
+     * BEFORE any disk write, reject-early guard against the zip's own metadata (central
+     * directory entry count + declared per-entry/total uncompressed sizes, read via
+     * {@see ZipArchive::statIndex()}). This is a fast first line of defense, NOT the
+     * authoritative one — a crafted zip can under-declare an entry's uncompressed size in
+     * its central directory while the entry actually decompresses to far more (inflate has
+     * no idea what the size field claims; it only stops at its own end-of-stream marker).
+     * The authoritative guard is the streaming cap in {@see self::extractTo()}, which
+     * bounds the ACTUAL bytes read regardless of what this pre-scan saw.
+     *
+     * @param  array{max_entry_bytes: int, max_total_bytes: int, max_entries: int}  $limits
+     */
+    private function assertWithinDeclaredLimits(ZipArchive $zip, array $limits): void
+    {
+        if ($zip->numFiles > $limits['max_entries']) {
+            throw new RuntimeException(sprintf(
+                'Zip declares %d entries, exceeding the %d-entry limit (zenon.addon_zip.max_entries).',
+                $zip->numFiles,
+                $limits['max_entries'],
+            ));
+        }
+
+        $declaredTotal = 0;
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $stat = $zip->statIndex($i);
+
+            if ($stat === false) {
+                continue;
+            }
+
+            $name = $stat['name'];
+            $size = $stat['size'];
+
+            if ($size > $limits['max_entry_bytes']) {
+                throw new RuntimeException(sprintf(
+                    'Zip entry [%s] declares %d bytes, exceeding the %d-byte limit (zenon.addon_zip.max_entry_bytes).',
+                    $name,
+                    $size,
+                    $limits['max_entry_bytes'],
+                ));
+            }
+
+            $declaredTotal += $size;
+
+            if ($declaredTotal > $limits['max_total_bytes']) {
+                throw new RuntimeException(sprintf(
+                    'Zip declares a total uncompressed size of at least %d bytes (reached at entry [%s]), '
+                    .'exceeding the %d-byte limit (zenon.addon_zip.max_total_bytes).',
+                    $declaredTotal,
+                    $name,
+                    $limits['max_total_bytes'],
+                ));
+            }
+        }
+    }
+
+    /**
      * Streams every zip entry to $tempDir entry-by-entry (never bulk `extractTo`, so the
      * name filter below is authoritative) with zip-slip protection: any entry whose name,
      * after stripping the wrapper prefix, contains a ".." segment, starts with "/" or a
@@ -243,10 +321,22 @@ final class AddonZipInstaller
      * (unix external-attributes mode 0120000) are silently skipped — ZipArchive::extractTo
      * doesn't materialize symlinks on Windows either, but streaming write means we control
      * this explicitly rather than relying on platform behavior.
+     *
+     * The per-entry and running-total byte caps applied here are the AUTHORITATIVE guard
+     * (see {@see self::assertWithinDeclaredLimits()}): `stream_get_contents($stream,
+     * $maxEntryBytes + 1)` never reads more than one byte past the allowed cap regardless
+     * of what the zip's central directory claims, so a forged (under-declared) entry size
+     * is caught here by the ACTUAL bytes streamed, not by trusting metadata.
+     *
+     * @param  array{max_entry_bytes: int, max_total_bytes: int, max_entries: int}  $limits
      */
-    private function extractTo(ZipArchive $zip, string $prefix, string $tempDir): void
+    private function extractTo(ZipArchive $zip, string $prefix, string $tempDir, array $limits): void
     {
         File::ensureDirectoryExists($tempDir);
+
+        $maxEntryBytes = $limits['max_entry_bytes'];
+        $maxTotalBytes = $limits['max_total_bytes'];
+        $actualTotalBytes = 0;
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $name = $zip->getNameIndex($i);
@@ -292,11 +382,34 @@ final class AddonZipInstaller
                 throw new RuntimeException(sprintf('Could not read zip entry [%s].', $name));
             }
 
-            $contents = stream_get_contents($stream);
+            // Cap the read at maxEntryBytes + 1: if the entry's ACTUAL decompressed
+            // content is bigger than declared (a forged/under-declared central-directory
+            // size), this reads exactly one byte past the allowed cap instead of
+            // continuing to inflate an unbounded amount of data into memory.
+            $contents = stream_get_contents($stream, $maxEntryBytes + 1);
             fclose($stream);
 
             if ($contents === false) {
                 throw new RuntimeException(sprintf('Failed to read zip entry [%s].', $name));
+            }
+
+            if (strlen($contents) > $maxEntryBytes) {
+                throw new RuntimeException(sprintf(
+                    'Zip entry [%s] streamed more than %d bytes, exceeding the declared-safe per-entry limit '
+                    .'(zenon.addon_zip.max_entry_bytes) — this entry\'s declared size cannot be trusted.',
+                    $name,
+                    $maxEntryBytes,
+                ));
+            }
+
+            $actualTotalBytes += strlen($contents);
+
+            if ($actualTotalBytes > $maxTotalBytes) {
+                throw new RuntimeException(sprintf(
+                    'Zip has streamed more than %d bytes in total, exceeding the limit '
+                    .'(zenon.addon_zip.max_total_bytes) — this zip\'s declared total cannot be trusted.',
+                    $maxTotalBytes,
+                ));
             }
 
             File::put($destination, $contents);

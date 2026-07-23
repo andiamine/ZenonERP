@@ -17,6 +17,7 @@
         "./permissions": "./permissions.ts",
         "./router": "./router.tsx",
         "./store": "./store.ts",
-        "./companySwitcher": "./companySwitcher.tsx"
+        "./companySwitcher": "./companySwitcher.tsx",
+        "./theme": "./theme.ts"
     }
 }

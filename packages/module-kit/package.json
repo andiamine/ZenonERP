@@ -1,25 +1,25 @@
 {
     "name": "@zenon/module-kit",
-    "version": "1.0.0",
-    "description": "Build toolkit for ZenonERP third-party addons: Module Federation remote preset + Tailwind preset consuming host design tokens. Dependency pins are the platform 1.x toolchain contract.",
+    "version": "2.0.0",
+    "description": "Build toolkit for ZenonERP third-party addons: Module Federation remote preset consuming the host's MUI design system through shared singletons (addons ship no CSS). Dependency pins are the platform 1.x toolchain contract.",
     "type": "module",
     "license": "MIT",
     "bin": { "zenon-module": "./bin/zenon-module.mjs" },
     "exports": {
-        ".": "./src/index.mjs",
-        "./css/preset.css": "./css/preset.css",
-        "./css/tokens.css": "./css/tokens.css"
+        ".": "./src/index.mjs"
     },
     "types": "./src/index.d.ts",
     "dependencies": {
+        "@emotion/react": "11.14.0",
+        "@emotion/styled": "11.14.1",
         "@module-federation/vite": "1.18.2",
-        "@tailwindcss/vite": "4.3.3",
+        "@mui/icons-material": "9.2.0",
+        "@mui/material": "9.2.0",
         "@types/react": "^19.2.0",
         "@types/react-dom": "^19.2.0",
         "@vitejs/plugin-react": "6.0.3",
         "react": "19.2.7",
         "react-dom": "19.2.7",
-        "tailwindcss": "4.3.3",
         "vite": "8.1.5"
     }
 }

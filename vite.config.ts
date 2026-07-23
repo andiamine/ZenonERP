@@ -36,7 +36,29 @@ export default defineConfig({
                 'react/': { singleton: true, requiredVersion: '19.2.7' },
                 'react-dom': { singleton: true, requiredVersion: '19.2.7' },
                 'react-dom/': { singleton: true, requiredVersion: '19.2.7' },
-                '@base-ui/react': { singleton: true, requiredVersion: '1.6.0' },
+                // MUI design system (platform 1.0 contract, redefined in place — CLAUDE.md §7).
+                // The exact key is an EAGER full-barrel registration: any component an addon
+                // root-imports exists in the share scope. That deliberately defeats host
+                // tree-shaking of @mui/material (the open addon contract wins); the cost is
+                // isolated in the dedicated 'mui' chunk below.
+                '@mui/material': { singleton: true, requiredVersion: '9.2.0' },
+                // Lazy catch-all for host-internal subpaths (@mui/material/styles, /CssBaseline…).
+                // NOT an addon guarantee: it only materializes from host-side VALUE imports —
+                // which is why addons import the root barrel only (eslint + module-kit README).
+                '@mui/material/': { singleton: true, requiredVersion: '9.2.0' },
+                // Explicit + eager (moduleTypes precedent below): addon-BUNDLED @mui/icons-material
+                // icons chain to `export { createSvgIcon } from '@mui/material/SvgIcon'` — spike-
+                // verified 2026-07-23 against icons-material 9.2.0 (NOT /utils; re-verify on MUI
+                // upgrades). The icons package itself is never shared — an exact
+                // '@mui/icons-material' key would eagerly pull the ~2,600-icon barrel into the
+                // host bundle; addons bundle the few icons they use.
+                '@mui/material/SvgIcon': { singleton: true, requiredVersion: '9.2.0' },
+                // Emotion engine — singletons so the theme/cache context is ONE instance across
+                // the host and every remote. No '@emotion/react/' trailing-slash key: only the
+                // css prop's jsx-runtime subpath would need it, and ZenonERP never uses the css
+                // prop (styling is sx/styled via @mui/material re-exports).
+                '@emotion/react': { singleton: true, requiredVersion: '11.14.0' },
+                '@emotion/styled': { singleton: true, requiredVersion: '11.14.1' },
                 '@tanstack/react-router': { singleton: true, requiredVersion: '1.170.18' },
                 '@tanstack/react-query': { singleton: true, requiredVersion: '5.101.2' },
                 zustand: { singleton: true, requiredVersion: '5.0.14' },
@@ -79,7 +101,13 @@ export default defineConfig({
         rolldownOptions: {
             output: {
                 advancedChunks: {
-                    groups: [{ name: 'vendor', test: /[\\/]node_modules[\\/]/ }],
+                    // First match wins (Rolldown): MUI + Emotion get their own cache-stable
+                    // chunk — the eager full-barrel share (above) makes it the largest vendor
+                    // payload, and it only changes on an MUI upgrade.
+                    groups: [
+                        { name: 'mui', test: /[\\/]node_modules[\\/](@mui|@emotion)[\\/]/ },
+                        { name: 'vendor', test: /[\\/]node_modules[\\/]/ },
+                    ],
                 },
             },
         },

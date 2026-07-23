@@ -1,4 +1,3 @@
-import '../css/addon.css';
 import type { ZenonModule } from '@zenon/core/moduleTypes';
 import { nav } from './nav';
 import { createModuleRoutes } from './routes';
@@ -10,9 +9,8 @@ import { createModuleRoutes } from './routes';
  * Core `GET /api/v1/core/companies` response `extra` map, proving a runtime remote reaches
  * both the API and the design system.
  *
- * The `../css/addon.css` import is FIRST and load-bearing: `@zenon/module-kit` compiles it
- * into the remote's own stylesheet (host tokens, preflight off) and the host loader injects
- * it when the remote mounts.
+ * The addon ships NO CSS (module-kit 2.0): all styling arrives at mount time through the
+ * host's MUI theme via the shared @mui/material/@emotion singletons.
  *
  * Widget id `'demo.companies'` — the prefix MUST equal this module's id ('demo'): the
  * dashboard host resolves the i18n namespace via `widget.id.split('.')[0]`. Demo ships zero

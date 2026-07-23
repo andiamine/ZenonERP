@@ -1,16 +1,27 @@
 import { federation } from '@module-federation/vite';
-import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 // Host singleton pin table — the platform 1.x contract (mirrors the host's
 // vite.config.ts shared block). A pin bump here is a new kit release.
+//
+// MUI (kit 2.0): addons import the @mui/material ROOT BARREL only — subpath share
+// entries ('@mui/material/…') exist on the host only for paths the host itself
+// value-imports, so they are not part of the addon contract (ESLint-enforced).
+// '@mui/material/SvgIcon' is the one explicit subpath the host guarantees: addon-BUNDLED
+// @mui/icons-material icons chain to `export { createSvgIcon } from '@mui/material/SvgIcon'`
+// (spike-verified 2026-07-23 on 9.2.0 — re-verify on MUI upgrades).
+// @mui/icons-material itself is never shared — addons bundle the few icons they use.
 const HOST_SINGLETONS = {
     react: '19.2.7',
     'react/': '19.2.7',
     'react-dom': '19.2.7',
     'react-dom/': '19.2.7',
-    '@base-ui/react': '1.6.0',
+    '@mui/material': '9.2.0',
+    '@mui/material/': '9.2.0',
+    '@mui/material/SvgIcon': '9.2.0',
+    '@emotion/react': '11.14.0',
+    '@emotion/styled': '11.14.1',
     '@tanstack/react-router': '1.170.18',
     '@tanstack/react-query': '5.101.2',
     '@tanstack/react-table': '8.21.3',
@@ -147,12 +158,14 @@ export function defineAddonConfig({ alias, entry = 'resources/js/index.ts' }) {
         base: '',
         plugins: [
             react(),
-            tailwindcss(),
             federation({
                 name: remoteNameForAlias(alias),
                 filename: 'remoteEntry.js',
                 exposes: { './module': './' + entry },
                 shared: buildShared(),
+                // Addons normally ship ZERO CSS (kit 2.0 — styling arrives through the host's
+                // MUI theme via the shared singletons). Kept on: it is a no-op with no CSS and
+                // correctly bundles any bespoke stylesheet a future addon deliberately ships.
                 bundleAllCSS: true,
                 manifest: true,
                 dts: false,

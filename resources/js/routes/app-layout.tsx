@@ -1,3 +1,14 @@
+import Alert from '@mui/material/Alert';
+import AlertTitle from '@mui/material/AlertTitle';
+import AppBar from '@mui/material/AppBar';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import DarkModeOutlined from '@mui/icons-material/DarkModeOutlined';
+import LightModeOutlined from '@mui/icons-material/LightModeOutlined';
+import MenuOutlined from '@mui/icons-material/MenuOutlined';
 import { createRoute, Outlet, redirect } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import type { BootstrapData, ZenonModule } from '@zenon/core/moduleTypes';
@@ -7,7 +18,6 @@ import { CompanySwitcher } from '@zenon/core/companySwitcher';
 import { NavSidebar } from '@zenon/core/nav';
 import { hasPermission } from '@zenon/core/permissions';
 import { useUiStore } from '@zenon/core/store';
-import { Alert, AlertDescription, AlertTitle, Button } from '@zenon/core/ui';
 import { rootRoute } from './__root';
 
 /**
@@ -31,35 +41,73 @@ export const appLayoutRoute = createRoute({
     component: AppShell,
 });
 
+/**
+ * The canonical MUI dashboard shell (MUI migration, 2026-07): fixed neutral AppBar over a
+ * permanent mini-variant Drawer. The AppBar menu button drives the drawer's collapse
+ * (store-persisted); the dark toggle flips the `.dark` class via store.setTheme, which the
+ * theme's cssVariables colorSchemeSelector picks up.
+ */
 function AppShell() {
     const { t } = useTranslation();
     // Explicit annotation — see dashboard.tsx: the dynamic tree erases inference here.
     const { modules, boot }: { modules: ZenonModule[]; boot: BootstrapData } = appLayoutRoute.useRouteContext();
     const logout = useLogout();
+    const navCollapsed = useUiStore((state) => state.navCollapsed);
+    const toggleNav = useUiStore((state) => state.toggleNav);
+    const theme = useUiStore((state) => state.theme);
+    const setTheme = useUiStore((state) => state.setTheme);
 
     return (
-        <div className="flex h-screen bg-background">
+        <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+            <AppBar
+                position="fixed"
+                color="inherit"
+                elevation={0}
+                sx={{
+                    zIndex: (muiTheme) => muiTheme.zIndex.drawer + 1,
+                    bgcolor: 'background.paper',
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                }}
+            >
+                <Toolbar sx={{ gap: 1.5 }}>
+                    <IconButton
+                        edge="start"
+                        onClick={toggleNav}
+                        aria-label={t(navCollapsed ? 'nav.expand' : 'nav.collapse')}
+                    >
+                        <MenuOutlined />
+                    </IconButton>
+                    <Typography variant="h6" component="span" sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}>
+                        {t('appName')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {boot.tenant.name ?? boot.tenant.id}
+                    </Typography>
+                    <Box sx={{ flexGrow: 1 }} />
+                    <CompanySwitcher boot={boot} />
+                    <IconButton
+                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        aria-label={t('nav.toggleTheme')}
+                    >
+                        {theme === 'dark' ? <LightModeOutlined /> : <DarkModeOutlined />}
+                    </IconButton>
+                    <Typography variant="body2" color="text.secondary">
+                        {boot.user.name}
+                    </Typography>
+                    <Button color="inherit" onClick={() => logout.mutate()} disabled={logout.isPending}>
+                        {t('nav.logout')}
+                    </Button>
+                </Toolbar>
+            </AppBar>
             <NavSidebar modules={modules} boot={boot} />
-            <div className="flex min-w-0 flex-1 flex-col">
-                <header className="flex h-14 items-center justify-between border-b border-border px-6">
-                    <div className="flex items-center gap-3">
-                        <span className="font-semibold tracking-tight">{t('appName')}</span>
-                        <span className="text-sm text-muted-foreground">{boot.tenant.name ?? boot.tenant.id}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <CompanySwitcher boot={boot} />
-                        <span className="text-sm text-muted-foreground">{boot.user.name}</span>
-                        <Button variant="ghost" size="sm" onClick={() => logout.mutate()} disabled={logout.isPending}>
-                            {t('nav.logout')}
-                        </Button>
-                    </div>
-                </header>
-                <main className="min-w-0 flex-1 overflow-y-auto p-6">
-                    <RemoteModuleNotices boot={boot} />
-                    <Outlet />
-                </main>
-            </div>
-        </div>
+            <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: 3 }}>
+                {/* Spacer matching the fixed AppBar height. */}
+                <Toolbar />
+                <RemoteModuleNotices boot={boot} />
+                <Outlet />
+            </Box>
+        </Box>
     );
 }
 
@@ -78,23 +126,27 @@ function RemoteModuleNotices({ boot }: { boot: BootstrapData }) {
     }
 
     return (
-        <Alert variant="warning" className="mb-6">
+        <Alert
+            severity="warning"
+            sx={{ mb: 3 }}
+            action={
+                <Button color="inherit" size="small" onClick={() => dismiss()}>
+                    {t('remoteModules.dismiss')}
+                </Button>
+            }
+        >
             <AlertTitle>{t('remoteModules.noticeTitle')}</AlertTitle>
-            <AlertDescription>
-                <ul className="grid gap-1">
-                    {notices.map((notice) => (
-                        <li key={`${notice.id}:${notice.kind}`}>
-                            {t(`remoteModules.${notice.kind}`, { id: notice.id })}
-                            <span className="text-muted-foreground"> — {notice.detail}</span>
-                        </li>
-                    ))}
-                </ul>
-                <div className="mt-2">
-                    <Button variant="ghost" size="sm" onClick={() => dismiss()}>
-                        {t('remoteModules.dismiss')}
-                    </Button>
-                </div>
-            </AlertDescription>
+            <Box component="ul" sx={{ m: 0, pl: 2.5, display: 'grid', gap: 0.5 }}>
+                {notices.map((notice) => (
+                    <li key={`${notice.id}:${notice.kind}`}>
+                        {t(`remoteModules.${notice.kind}`, { id: notice.id })}
+                        <Box component="span" sx={{ color: 'text.secondary' }}>
+                            {' '}
+                            — {notice.detail}
+                        </Box>
+                    </li>
+                ))}
+            </Box>
         </Alert>
     );
 }

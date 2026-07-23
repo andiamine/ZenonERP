@@ -1,10 +1,20 @@
+import Drawer from '@mui/material/Drawer';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Toolbar from '@mui/material/Toolbar';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { hasPermission } from './permissions';
 import { useUiStore } from './store';
-import { Button, cn, NavIcon } from './ui';
+import { NavIcon } from './ui';
 import type { BootstrapData, NavItem, ZenonModule } from './moduleTypes';
+
+export const DRAWER_WIDTH = 240;
+export const DRAWER_WIDTH_COLLAPSED = 64;
 
 /**
  * Module route paths are runtime-dynamic (AnyRoute children) and therefore absent from the
@@ -50,54 +60,65 @@ export function buildNav(modules: ZenonModule[], boot: BootstrapData): Array<Nav
         .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
 }
 
+/**
+ * Permanent mini-variant Drawer (the canonical MUI dashboard sidebar). Collapse state
+ * lives in the ui store (persisted); the toggle is the AppBar menu button in app-layout.
+ * Active route styling: TanStack Link's activeProps applies MUI's own `Mui-selected`
+ * class, so ListItemButton picks up the theme's selected treatment with no router
+ * coupling inside MUI.
+ */
 export function NavSidebar({ modules, boot }: { modules: ZenonModule[]; boot: BootstrapData }) {
     const { t } = useTranslation();
     const navCollapsed = useUiStore((state) => state.navCollapsed);
-    const toggleNav = useUiStore((state) => state.toggleNav);
     const items = buildNav(modules, boot);
+    const width = navCollapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH;
 
     return (
-        <aside
-            className={cn(
-                'flex h-full flex-col border-r border-border bg-background transition-[width]',
-                navCollapsed ? 'w-14' : 'w-60',
-            )}
+        <Drawer
+            variant="permanent"
+            sx={{
+                width,
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
+                transition: (theme) => theme.transitions.create('width'),
+                '& .MuiDrawer-paper': {
+                    width,
+                    overflowX: 'hidden',
+                    boxSizing: 'border-box',
+                    transition: (theme) => theme.transitions.create('width'),
+                },
+            }}
         >
-            <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
+            {/* Spacer matching the fixed AppBar height so the list starts below it. */}
+            <Toolbar />
+            <List component="nav" sx={{ px: 0.75 }}>
                 {items.map((item) => {
                     const label = t(item.labelKey, { ns: item.ns });
 
                     return (
-                        <NavLink
-                            key={`${item.ns}:${item.id}`}
-                            to={item.to}
-                            title={navCollapsed ? label : undefined}
-                            className={cn(
-                                'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground',
-                                navCollapsed && 'justify-center px-0',
-                            )}
-                            activeProps={{ className: 'bg-accent text-accent-foreground' }}
-                            activeOptions={{ exact: item.to === '/' }}
-                        >
-                            <NavIcon name={item.icon} />
-                            {!navCollapsed && <span className="truncate">{label}</span>}
-                        </NavLink>
+                        <ListItem key={`${item.ns}:${item.id}`} disablePadding sx={{ display: 'block' }}>
+                            <ListItemButton
+                                component={NavLink}
+                                to={item.to}
+                                activeProps={{ className: 'Mui-selected' }}
+                                activeOptions={{ exact: item.to === '/' }}
+                                title={navCollapsed ? label : undefined}
+                                sx={{
+                                    minHeight: 44,
+                                    borderRadius: 1,
+                                    px: navCollapsed ? 0 : 1.5,
+                                    justifyContent: navCollapsed ? 'center' : 'initial',
+                                }}
+                            >
+                                <ListItemIcon sx={{ minWidth: 0, mr: navCollapsed ? 0 : 1.5, justifyContent: 'center' }}>
+                                    <NavIcon name={item.icon} />
+                                </ListItemIcon>
+                                {!navCollapsed && <ListItemText primary={label} slotProps={{ primary: { variant: 'body2', noWrap: true } }} />}
+                            </ListItemButton>
+                        </ListItem>
                     );
                 })}
-            </nav>
-            <div className="border-t border-border p-2">
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleNav}
-                    aria-label={t(navCollapsed ? 'nav.expand' : 'nav.collapse')}
-                    className={cn('w-full', navCollapsed ? 'justify-center px-0' : 'justify-start')}
-                >
-                    <NavIcon name={navCollapsed ? 'chevrons-right' : 'chevrons-left'} />
-                    {!navCollapsed && <span>{t('nav.collapse')}</span>}
-                </Button>
-            </div>
-        </aside>
+            </List>
+        </Drawer>
     );
 }

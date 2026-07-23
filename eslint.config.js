@@ -33,7 +33,9 @@ export default tseslint.config(
         languageOptions: { globals: { ...globals.browser } },
     },
     {
-        // CLAUDE.md §2 boundary, CI-fatal: module frontends import only @zenon/core + their own files.
+        // CLAUDE.md §2 boundary, CI-fatal: module frontends import @zenon/core, @mui/material,
+        // @mui/icons-material subpaths and their own files — never other modules, the Emotion
+        // engine, or MUI internals.
         files: ['modules/**/resources/js/**/*.{ts,tsx}'],
         rules: {
             'no-restricted-imports': [
@@ -49,12 +51,14 @@ export default tseslint.config(
                             message: 'The generated module registry is shell-internal.',
                         },
                         {
-                            group: ['@base-ui/react', '@base-ui/react/*'],
-                            message: 'UI components come only from @zenon/core/ui (CLAUDE.md §2).',
+                            group: ['@emotion/react', '@emotion/react/*', '@emotion/styled', '@emotion/styled/*', '@mui/system', '@mui/system/*', '@mui/styled-engine', '@mui/styled-engine/*'],
+                            message: 'Style via @mui/material (sx/styled/theme re-exports) — the Emotion engine is host-internal (CLAUDE.md §2).',
                         },
                         {
-                            group: ['lucide-react', 'lucide-react/*'],
-                            message: 'Icons come only from @zenon/core/ui (NavIcon/icons registry) (CLAUDE.md §2).',
+                            // regex, not group: gitignore-style groups can't re-include children
+                            // of an excluded parent, and only the BARE barrel is banned here.
+                            regex: '^@mui/icons-material$',
+                            message: 'Import icons by subpath (@mui/icons-material/IconName) — the root barrel pulls 2,600+ modules.',
                         },
                     ],
                 },
@@ -62,17 +66,44 @@ export default tseslint.config(
         },
     },
     {
-        // The Base UI ban also applies to shell code — only the design-system kit touches it.
-        files: ['resources/js/**/*.{ts,tsx}'],
-        ignores: ['resources/js/core/ui/**'],
+        // Third-party addons only: the @mui/material ROOT BARREL is the addon contract —
+        // subpath share entries only exist for paths the HOST value-imports, so a subpath
+        // import here would bundle a private MUI copy or throw MISSING at mount
+        // (module-kit README, CLAUDE.md §7).
+        files: ['modules/thirdparty/*/resources/js/**/*.{ts,tsx}'],
         rules: {
             'no-restricted-imports': [
                 'error',
                 {
                     patterns: [
                         {
-                            group: ['@base-ui/react', '@base-ui/react/*'],
-                            message: 'Use @zenon/core/ui (CLAUDE.md §2).',
+                            group: ['@mui/material/*'],
+                            message: 'Addons import from the @mui/material root barrel only — subpath share entries are not part of the platform contract (module-kit README).',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    {
+        // The Emotion/MUI-internals ban also applies to shell code — only @zenon/core
+        // (theme.ts, the ui/ composites) touches the engine surface.
+        files: ['resources/js/**/*.{ts,tsx}'],
+        ignores: ['resources/js/core/**'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: ['@emotion/react', '@emotion/react/*', '@emotion/styled', '@emotion/styled/*', '@mui/system', '@mui/system/*', '@mui/styled-engine', '@mui/styled-engine/*'],
+                            message: 'Style via @mui/material (sx/styled/theme re-exports) — the Emotion engine is host-internal (CLAUDE.md §2).',
+                        },
+                        {
+                            // regex, not group: gitignore-style groups can't re-include children
+                            // of an excluded parent, and only the BARE barrel is banned here.
+                            regex: '^@mui/icons-material$',
+                            message: 'Import icons by subpath (@mui/icons-material/IconName) — the root barrel pulls 2,600+ modules.',
                         },
                     ],
                 },

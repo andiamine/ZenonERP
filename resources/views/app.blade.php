@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ config('app.name', 'ZenonERP') }}</title>
     <script>
-        // Pre-hydration dark mode (class strategy, pairs with @custom-variant dark in
-        // app.css and core/store.ts) — applied before paint so there is no flash.
+        // Pre-hydration dark mode (class strategy) — applied before paint so there is no
+        // flash. Pairs with core/store.ts and the MUI theme's cssVariables
+        // colorSchemeSelector: 'class' (core/theme.ts): MUI emits its dark-scheme CSS
+        // variables under this same .dark class on <html>.
         try {
             var theme = localStorage.getItem('zenon.theme');
             if (theme === 'dark' || (theme === null && matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -20,7 +22,7 @@
         @vite('resources/js/main.tsx')
     @endif
 </head>
-<body class="bg-background font-sans text-foreground antialiased">
+<body>
     <div id="root"></div>
 </body>
 </html>

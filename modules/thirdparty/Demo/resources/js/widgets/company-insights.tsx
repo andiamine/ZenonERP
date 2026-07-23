@@ -1,12 +1,14 @@
+import { Skeleton, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { Skeleton } from '@zenon/core/ui';
 import { useDemoCompanies } from '../api';
 
 /**
  * The Demo dashboard widget (the addon's working consumer, mirroring Audit's recent-activity
  * dogfood). Default export — `DashboardWidget.component` in ../index.ts lazy-loads it. Shares
  * the `useDemoCompanies` query with the page, and shows each company mapped to the addon-computed
- * `insight` string; a company with no `extra` entry falls back to a placeholder.
+ * `insight` string; a company with no `extra` entry falls back to a placeholder. Renders inside
+ * the dashboard's WidgetSlot Card, so it stays lean (no Card of its own); UI comes from
+ * `@mui/material` (the host's shared singleton — root barrel ONLY, the addon platform contract).
  */
 export default function CompanyInsightsWidget() {
     const { t } = useTranslation('demo');
@@ -16,32 +18,38 @@ export default function CompanyInsightsWidget() {
 
     if (query.isLoading) {
         return (
-            <div className="flex flex-col gap-2">
+            <Stack spacing={1}>
                 {Array.from({ length: 3 }).map((_, index) => (
-                    <Skeleton key={index} className="h-5 w-full" />
+                    <Skeleton key={index} variant="rounded" height={20} />
                 ))}
-            </div>
+            </Stack>
         );
     }
 
     if (companies.length === 0) {
-        return <p className="text-sm text-muted-foreground">{t('widgets.companies.empty')}</p>;
+        return (
+            <Typography variant="body2" color="text.secondary">
+                {t('widgets.companies.empty')}
+            </Typography>
+        );
     }
 
     return (
-        <ul className="flex flex-col gap-2 text-sm">
+        <Stack component="ul" spacing={1} sx={{ m: 0, p: 0, listStyle: 'none' }}>
             {companies.map((company) => {
                 const insight = extra[company.id];
 
                 return (
-                    <li key={company.id} className="flex flex-col gap-0.5">
-                        <span className="font-medium">{company.name}</span>
-                        <span className="text-xs text-muted-foreground">
+                    <Stack component="li" key={company.id} spacing={0.25}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {company.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
                             {insight ? insight.insight : t('widgets.companies.noInsight')}
-                        </span>
-                    </li>
+                        </Typography>
+                    </Stack>
                 );
             })}
-        </ul>
+        </Stack>
     );
 }

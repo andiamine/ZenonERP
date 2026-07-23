@@ -1,3 +1,15 @@
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Paper from '@mui/material/Paper';
+import Skeleton from '@mui/material/Skeleton';
+import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Typography from '@mui/material/Typography';
 import {
     flexRender,
     getCoreRowModel,
@@ -8,10 +20,6 @@ import {
 } from '@tanstack/react-table';
 import type { ReactNode } from 'react';
 import type { PageMeta } from '../apiClient';
-import { Button } from './button';
-import { cn } from './cn';
-import { Skeleton } from './skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 
 export interface DataTableProps<TData> {
     /** TanStack Table column defs. The value generic is deliberately `any` (TanStack's own
@@ -32,10 +40,12 @@ export interface DataTableProps<TData> {
 }
 
 /**
- * Generic data table on @tanstack/react-table 8.21 — getCoreRowModel only, manual
- * pagination + manual sorting (the server owns both via spatie/laravel-query-builder).
- * Composed from the `table.tsx` primitives rather than ReUI's data-grid: data-grid pulls in
- * dnd-kit + react-virtual for drag/virtualization we don't need here (CLAUDE.md task brief).
+ * Generic data table on @tanstack/react-table 8.21 rendered with MUI Table primitives —
+ * getCoreRowModel only, manual pagination + manual sorting (the server owns both via
+ * spatie/laravel-query-builder). Deliberately NOT MUI X DataGrid (CLAUDE.md: avoids the
+ * commercial license in the platform contract; TanStack is already a shared singleton).
+ * Column defs own their header UI — a sortable column renders TableSortLabel in its own
+ * header component.
  */
 function DataTable<TData>({
     columns,
@@ -62,34 +72,34 @@ function DataTable<TData>({
     const columnCount = columns.length || 1;
 
     return (
-        <div data-slot="data-table" className={cn('flex flex-col gap-3', className)}>
-            <div className="overflow-x-auto rounded-md border border-border">
-                <Table>
-                    <TableHeader>
+        <Stack spacing={1.5} className={className}>
+            <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                    <TableHead>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => (
-                                    <TableHead key={header.id}>
+                                    <TableCell key={header.id} sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
                                         {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                                    </TableHead>
+                                    </TableCell>
                                 ))}
                             </TableRow>
                         ))}
-                    </TableHeader>
+                    </TableHead>
                     <TableBody>
                         {isLoading ? (
                             Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
                                 <TableRow key={`skeleton-${rowIndex}`}>
                                     {Array.from({ length: columnCount }).map((__, colIndex) => (
                                         <TableCell key={colIndex}>
-                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton variant="text" />
                                         </TableCell>
                                     ))}
                                 </TableRow>
                             ))
                         ) : table.getRowModel().rows.length > 0 ? (
                             table.getRowModel().rows.map((row) => (
-                                <TableRow key={row.id}>
+                                <TableRow key={row.id} hover>
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                                     ))}
@@ -97,44 +107,44 @@ function DataTable<TData>({
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={columnCount} className="h-24 text-center whitespace-normal text-muted-foreground">
+                                <TableCell colSpan={columnCount} align="center" sx={{ py: 6, color: 'text.secondary' }}>
                                     {emptyMessage}
                                 </TableCell>
                             </TableRow>
                         )}
                     </TableBody>
                 </Table>
-            </div>
+            </TableContainer>
             {meta && (
-                <div data-slot="data-table-pagination" className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
-                    <span>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
                         {meta.total > 0
                             ? `${(meta.current_page - 1) * meta.per_page + 1}–${Math.min(meta.current_page * meta.per_page, meta.total)} of ${meta.total}`
                             : `0 of ${meta.total}`}
-                    </span>
-                    <div className="flex items-center gap-2">
+                    </Typography>
+                    <Stack direction="row" spacing={1}>
                         <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
+                            variant="outlined"
+                            color="inherit"
+                            size="small"
                             disabled={isLoading || meta.current_page <= 1}
                             onClick={() => onPageChange?.(meta.current_page - 1)}
                         >
                             Previous
                         </Button>
                         <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
+                            variant="outlined"
+                            color="inherit"
+                            size="small"
                             disabled={isLoading || meta.current_page >= meta.last_page}
                             onClick={() => onPageChange?.(meta.current_page + 1)}
                         >
                             Next
                         </Button>
-                    </div>
-                </div>
+                    </Stack>
+                </Box>
             )}
-        </div>
+        </Stack>
     );
 }
 

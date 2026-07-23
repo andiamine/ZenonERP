@@ -1,23 +1,23 @@
+import {
+    Button,
+    Checkbox,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    FormControlLabel,
+    Grid,
+    OutlinedInput,
+    Stack,
+    Typography,
+} from '@mui/material';
 import type { ColumnDef } from '@tanstack/react-table';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '@zenon/core/apiClient';
 import { useBoot } from '@zenon/core/bootstrap';
 import { hasPermission } from '@zenon/core/permissions';
-import {
-    Button,
-    Checkbox,
-    DataTable,
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    Field,
-    Input,
-} from '@zenon/core/ui';
-import { ApiErrorAlert } from '../components/api-error-alert';
-import { ConfirmDialog } from '../components/confirm-dialog';
+import { ApiErrorAlert, ConfirmDialog, DataTable, Field } from '@zenon/core/ui';
 import { useCreateRole, useDeleteRole, usePermissions, useRoles, useSyncRolePermissions, useUpdateRole } from '../api/roles';
 import type { PermissionDto, RoleDto } from '../api/types';
 
@@ -56,28 +56,34 @@ export function RolesPage() {
             id: 'actions',
             header: '',
             cell: ({ row }) => (
-                <div className="flex justify-end gap-2">
+                <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
                     {canUpdate && (
-                        <Button size="sm" variant="outline" onClick={() => openEdit(row.original)}>
+                        <Button size="small" variant="outlined" color="inherit" onClick={() => openEdit(row.original)}>
                             {t('shell:common.edit')}
                         </Button>
                     )}
                     {canDelete && (
-                        <Button size="sm" variant="ghost" onClick={() => setDeleting(row.original)}>
+                        <Button size="small" color="inherit" onClick={() => setDeleting(row.original)}>
                             {t('shell:common.delete')}
                         </Button>
                     )}
-                </div>
+                </Stack>
             ),
         },
     ];
 
     return (
-        <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between gap-4">
-                <h1 className="text-lg font-semibold">{t('roles.title')}</h1>
-                {canCreate && <Button onClick={openCreate}>{t('roles.create')}</Button>}
-            </div>
+        <Stack spacing={3}>
+            <Stack direction="row" spacing={2} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+                    {t('roles.title')}
+                </Typography>
+                {canCreate && (
+                    <Button variant="contained" onClick={openCreate}>
+                        {t('roles.create')}
+                    </Button>
+                )}
+            </Stack>
 
             {rolesQuery.isError && <ApiErrorAlert error={rolesQuery.error} />}
 
@@ -103,7 +109,7 @@ export function RolesPage() {
                     }
                 }}
             />
-        </div>
+        </Stack>
     );
 }
 
@@ -173,48 +179,63 @@ function RoleDialog({ open, onOpenChange, role }: { open: boolean; onOpenChange:
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>{role ? t('roles.edit') : t('roles.create')}</DialogTitle>
-                </DialogHeader>
-                <form className="flex flex-col gap-4" onSubmit={submit}>
+        <Dialog
+            open={open}
+            onClose={() => onOpenChange(false)}
+            maxWidth="sm"
+            fullWidth
+            slotProps={{ paper: { component: 'form', onSubmit: submit } }}
+        >
+            <DialogTitle>{role ? t('roles.edit') : t('roles.create')}</DialogTitle>
+            <DialogContent>
+                <Stack spacing={2.5} sx={{ pt: 0.5 }}>
                     <Field label={t('columns.name')} htmlFor="role-name" error={nameError}>
-                        <Input id="role-name" value={name} onValueChange={setName} />
+                        <OutlinedInput id="role-name" value={name} onChange={(event) => setName(event.target.value)} />
                     </Field>
 
                     {saveError instanceof ApiError && saveError.type !== 'validation_error' && <ApiErrorAlert error={saveError} />}
 
-                    <div className="flex flex-col gap-4">
-                        <span className="text-sm font-medium">{t('roles.permissions')}</span>
+                    <Stack spacing={2}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {t('roles.permissions')}
+                        </Typography>
                         {Object.entries(grouped).map(([segment, permissions]) => (
-                            <div key={segment} className="flex flex-col gap-2">
-                                <span className="text-xs font-semibold text-muted-foreground uppercase">{segment}</span>
-                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <Stack key={segment} spacing={1}>
+                                <Typography
+                                    variant="caption"
+                                    sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}
+                                >
+                                    {segment}
+                                </Typography>
+                                <Grid container spacing={0.5}>
                                     {permissions.map((permission) => (
-                                        <label key={permission.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                                            <Checkbox
-                                                checked={selected.has(permission.name)}
-                                                onCheckedChange={(checked) => toggle(permission.name, checked)}
+                                        <Grid key={permission.id} size={{ xs: 12, sm: 6 }}>
+                                            <FormControlLabel
+                                                control={
+                                                    <Checkbox
+                                                        size="small"
+                                                        checked={selected.has(permission.name)}
+                                                        onChange={(event) => toggle(permission.name, event.target.checked)}
+                                                    />
+                                                }
+                                                label={<Typography variant="body2">{permission.name}</Typography>}
                                             />
-                                            <span>{permission.name}</span>
-                                        </label>
+                                        </Grid>
                                     ))}
-                                </div>
-                            </div>
+                                </Grid>
+                            </Stack>
                         ))}
-                    </div>
-
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
-                            {t('shell:common.cancel')}
-                        </Button>
-                        <Button type="submit" disabled={pending}>
-                            {t('shell:common.save')}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                    </Stack>
+                </Stack>
             </DialogContent>
+            <DialogActions>
+                <Button color="inherit" onClick={() => onOpenChange(false)} disabled={pending}>
+                    {t('shell:common.cancel')}
+                </Button>
+                <Button type="submit" variant="contained" disabled={pending}>
+                    {t('shell:common.save')}
+                </Button>
+            </DialogActions>
         </Dialog>
     );
 }

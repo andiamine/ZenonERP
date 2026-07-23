@@ -1,11 +1,11 @@
+import { Alert, Box, Button, OutlinedInput, Skeleton, Stack, Switch, Typography } from '@mui/material';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '@zenon/core/apiClient';
 import { useBoot } from '@zenon/core/bootstrap';
 import { hasPermission } from '@zenon/core/permissions';
 import { useUiStore } from '@zenon/core/store';
-import { Alert, AlertDescription, Button, Field, Input, Skeleton, Switch } from '@zenon/core/ui';
-import { ApiErrorAlert } from '../components/api-error-alert';
+import { ApiErrorAlert, Field } from '@zenon/core/ui';
 import { useSaveSettings, useSettingDefinitions, useSettings } from '../api/settings';
 import type { SettingType, SettingsValues } from '../api/types';
 
@@ -33,7 +33,7 @@ function coerce(type: SettingType, raw: unknown): unknown {
  * Typed settings editor (CLAUDE.md §9.1) and THE X-Company-Id verify surface: the values are
  * the current company's effective settings (company override ← tenant ← default), and the
  * header that scopes them rides apiClient automatically — no special code here. Form is
- * definition-driven: string → Input, int/float → number Input, bool → Switch.
+ * definition-driven: string → OutlinedInput, int/float → number OutlinedInput, bool → Switch.
  */
 export function SettingsPage() {
     const { t } = useTranslation('core');
@@ -101,21 +101,23 @@ export function SettingsPage() {
     }
 
     return (
-        <div className="flex max-w-2xl flex-col gap-6">
-            <h1 className="text-lg font-semibold">{t('settings.title')}</h1>
+        <Stack spacing={3} sx={{ maxWidth: 672 }}>
+            <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+                {t('settings.title')}
+            </Typography>
 
             {(definitionsQuery.isError || valuesQuery.isError) && (
                 <ApiErrorAlert error={definitionsQuery.error ?? valuesQuery.error} />
             )}
 
             {loading ? (
-                <div className="flex flex-col gap-4">
+                <Stack spacing={2}>
                     {Array.from({ length: 4 }).map((_, index) => (
-                        <Skeleton key={index} className="h-9 w-full" />
+                        <Skeleton key={index} variant="rounded" height={36} />
                     ))}
-                </div>
+                </Stack>
             ) : (
-                <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+                <Stack component="form" spacing={2.5} onSubmit={handleSubmit}>
                     {definitions.map((definition) => {
                         const label = definition.label ?? definition.key;
                         const error = fieldErrors?.[`values.${definition.key}`];
@@ -127,15 +129,16 @@ export function SettingsPage() {
                                     <Switch
                                         id={definition.key}
                                         checked={Boolean(value)}
-                                        onCheckedChange={(checked) => update(definition.key, checked)}
+                                        onChange={(event) => update(definition.key, event.target.checked)}
                                         disabled={!canUpdate}
+                                        sx={{ alignSelf: 'flex-start' }}
                                     />
                                 ) : (
-                                    <Input
+                                    <OutlinedInput
                                         id={definition.key}
                                         type={definition.type === 'int' || definition.type === 'float' ? 'number' : 'text'}
                                         value={value == null ? '' : String(value)}
-                                        onValueChange={(next) => update(definition.key, next)}
+                                        onChange={(event) => update(definition.key, event.target.value)}
                                         disabled={!canUpdate}
                                     />
                                 )}
@@ -143,21 +146,17 @@ export function SettingsPage() {
                         );
                     })}
 
-                    {saved && !save.isPending && (
-                        <Alert variant="success">
-                            <AlertDescription>{t('shell:common.saved')}</AlertDescription>
-                        </Alert>
-                    )}
+                    {saved && !save.isPending && <Alert severity="success">{t('shell:common.saved')}</Alert>}
 
                     {canUpdate && (
-                        <div>
-                            <Button type="submit" disabled={save.isPending}>
+                        <Box>
+                            <Button type="submit" variant="contained" disabled={save.isPending}>
                                 {t('shell:common.save')}
                             </Button>
-                        </div>
+                        </Box>
                     )}
-                </form>
+                </Stack>
             )}
-        </div>
+        </Stack>
     );
 }

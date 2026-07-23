@@ -1,14 +1,23 @@
+import { Chip, Link, Skeleton, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { Badge, Skeleton } from '@zenon/core/ui';
-import { ApiErrorAlert } from '../components/api-error-alert';
+import { ApiErrorAlert } from '@zenon/core/ui';
 import { RouteLink } from '../components/route-link';
 import { useActivity } from '../api/activity';
-import { eventBadgeVariant, relativeTime } from '../lib/format';
+import { eventBadgeVariant, relativeTime, type EventBadgeVariant } from '../lib/format';
+
+/** Old Badge-variant vocabulary (lib/format.ts) → MUI Chip color. */
+const CHIP_COLOR: Record<EventBadgeVariant, 'success' | 'info' | 'error' | 'default'> = {
+    success: 'success',
+    info: 'info',
+    destructive: 'error',
+    secondary: 'default',
+};
 
 /**
  * The Phase 5 dashboard dogfood widget (CLAUDE.md §9.2 anti-gold-plating rule: every core
  * service ships only with a working consumer). Default export — `DashboardWidget.component`
  * in ../index.ts lazy-loads this file (resources/js/routes/dashboard.tsx `lazy(widget.component)`).
+ * Renders inside the dashboard's WidgetSlot Card, so it stays lean — no Card of its own.
  */
 export default function RecentActivityWidget() {
     const { t } = useTranslation('audit');
@@ -17,11 +26,11 @@ export default function RecentActivityWidget() {
 
     if (query.isLoading) {
         return (
-            <div className="flex flex-col gap-2">
+            <Stack spacing={1}>
                 {Array.from({ length: 3 }).map((_, index) => (
-                    <Skeleton key={index} className="h-5 w-full" />
+                    <Skeleton key={index} variant="rounded" height={20} />
                 ))}
-            </div>
+            </Stack>
         );
     }
 
@@ -30,29 +39,37 @@ export default function RecentActivityWidget() {
     }
 
     return (
-        <div className="flex flex-col gap-3 text-sm">
+        <Stack spacing={1.5}>
             {activities.length === 0 ? (
-                <p className="text-muted-foreground">{t('widgets.recent.empty')}</p>
+                <Typography variant="body2" color="text.secondary">
+                    {t('widgets.recent.empty')}
+                </Typography>
             ) : (
-                <ul className="flex flex-col gap-2">
+                <Stack component="ul" spacing={1} sx={{ m: 0, p: 0, listStyle: 'none' }}>
                     {activities.map((activity) => (
-                        <li key={activity.id} className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-2">
+                        <Stack component="li" key={activity.id} spacing={0.25}>
+                            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
                                 {activity.event && (
-                                    <Badge variant={eventBadgeVariant(activity.event)}>
-                                        {t(`events.${activity.event}`, { defaultValue: activity.event })}
-                                    </Badge>
+                                    <Chip
+                                        size="small"
+                                        color={CHIP_COLOR[eventBadgeVariant(activity.event)]}
+                                        label={t(`events.${activity.event}`, { defaultValue: activity.event })}
+                                    />
                                 )}
-                                <span className="truncate">{activity.description}</span>
-                            </div>
-                            <span className="text-xs text-muted-foreground">{relativeTime(activity.created_at, t)}</span>
-                        </li>
+                                <Typography variant="body2" noWrap>
+                                    {activity.description}
+                                </Typography>
+                            </Stack>
+                            <Typography variant="caption" color="text.secondary">
+                                {relativeTime(activity.created_at, t)}
+                            </Typography>
+                        </Stack>
                     ))}
-                </ul>
+                </Stack>
             )}
-            <RouteLink to="/audit" className="text-xs text-primary hover:underline">
+            <Link component={RouteLink} to="/audit" variant="caption" underline="hover">
                 {t('widgets.recent.viewAll')}
-            </RouteLink>
-        </div>
+            </Link>
+        </Stack>
     );
 }

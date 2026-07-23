@@ -1,29 +1,29 @@
-import { useTranslation } from 'react-i18next';
 import {
     Alert,
-    AlertDescription,
     AlertTitle,
     Card,
     CardContent,
-    CardDescription,
     CardHeader,
-    CardTitle,
     Skeleton,
+    Stack,
     Table,
     TableBody,
     TableCell,
+    TableContainer,
     TableHead,
-    TableHeader,
     TableRow,
-} from '@zenon/core/ui';
+    Typography,
+} from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDemoCompanies } from '../api';
 
 /**
  * The Demo addon page — makes the addon-computed fields visible: each company's name/code from
  * the Core API, alongside the `insight` and `computed_by` values the Demo PHP hook injected into
  * the response `extra` map. When the backend filter is off (or a company has no entry) the
- * insight cell shows a placeholder — proving the remote degrades gracefully. UI is sourced only
- * from `@zenon/core/ui`.
+ * insight cell shows a placeholder — proving the remote degrades gracefully. UI comes from
+ * `@mui/material` (the host's shared singleton — root barrel ONLY, the addon platform contract):
+ * the addon ships no UI code or CSS of its own and inherits the host theme at mount.
  */
 export function DemoPage() {
     const { t } = useTranslation('demo');
@@ -32,64 +32,69 @@ export function DemoPage() {
     const extra = query.data?.extra ?? {};
 
     return (
-        <div className="flex flex-col gap-6">
-            <h1 className="text-lg font-semibold">{t('page.title')}</h1>
+        <Stack spacing={3}>
+            <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+                {t('page.title')}
+            </Typography>
 
             {query.isError && (
-                <Alert variant="destructive">
+                <Alert severity="error">
                     <AlertTitle>{t('page.error')}</AlertTitle>
-                    <AlertDescription>{t('page.errorHint')}</AlertDescription>
+                    {t('page.errorHint')}
                 </Alert>
             )}
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>{t('page.cardTitle')}</CardTitle>
-                    <CardDescription>{t('page.cardDescription')}</CardDescription>
-                </CardHeader>
+            <Card variant="outlined">
+                <CardHeader title={t('page.cardTitle')} subheader={t('page.cardDescription')} />
                 <CardContent>
                     {query.isLoading ? (
-                        <div className="flex flex-col gap-2">
+                        <Stack spacing={1}>
                             {Array.from({ length: 3 }).map((_, index) => (
-                                <Skeleton key={index} className="h-8 w-full" />
+                                <Skeleton key={index} variant="rounded" height={32} />
                             ))}
-                        </div>
+                        </Stack>
                     ) : companies.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">{t('page.empty')}</p>
+                        <Typography variant="body2" color="text.secondary">
+                            {t('page.empty')}
+                        </Typography>
                     ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>{t('columns.name')}</TableHead>
-                                    <TableHead>{t('columns.code')}</TableHead>
-                                    <TableHead>{t('columns.insight')}</TableHead>
-                                    <TableHead>{t('columns.computedBy')}</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {companies.map((company) => {
-                                    const insight = extra[company.id];
+                        <TableContainer>
+                            <Table size="small">
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell sx={{ fontWeight: 600 }}>{t('columns.name')}</TableCell>
+                                        <TableCell sx={{ fontWeight: 600 }}>{t('columns.code')}</TableCell>
+                                        <TableCell sx={{ fontWeight: 600 }}>{t('columns.insight')}</TableCell>
+                                        <TableCell sx={{ fontWeight: 600 }}>{t('columns.computedBy')}</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {companies.map((company) => {
+                                        const insight = extra[company.id];
 
-                                    return (
-                                        <TableRow key={company.id}>
-                                            <TableCell className="font-medium">{company.name}</TableCell>
-                                            <TableCell>{company.code}</TableCell>
-                                            <TableCell>
-                                                {insight ? (
-                                                    insight.insight
-                                                ) : (
-                                                    <span className="text-muted-foreground">{t('page.noInsight')}</span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground">{insight?.computed_by ?? '—'}</TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
+                                        return (
+                                            <TableRow key={company.id}>
+                                                <TableCell sx={{ fontWeight: 500 }}>{company.name}</TableCell>
+                                                <TableCell>{company.code}</TableCell>
+                                                <TableCell>
+                                                    {insight ? (
+                                                        insight.insight
+                                                    ) : (
+                                                        <Typography component="span" variant="inherit" sx={{ color: 'text.secondary' }}>
+                                                            {t('page.noInsight')}
+                                                        </Typography>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell sx={{ color: 'text.secondary' }}>{insight?.computed_by ?? '—'}</TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
                     )}
                 </CardContent>
             </Card>
-        </div>
+        </Stack>
     );
 }

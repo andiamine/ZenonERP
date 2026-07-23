@@ -28,6 +28,7 @@ const resources = {
                 logout: 'Sign out',
                 collapse: 'Collapse',
                 expand: 'Expand',
+                toggleTheme: 'Toggle dark mode',
             },
             common: {
                 save: 'Save',
@@ -57,6 +58,10 @@ const resources = {
                 dismiss: 'Dismiss',
             },
             errors: {
+                // forbidden/generic: inline Alert titles used by the kit's ApiErrorAlert —
+                // the kit depends only on the shell namespace, never a module bundle.
+                forbidden: 'Access denied',
+                generic: 'Something went wrong',
                 forbiddenTitle: 'Access denied',
                 forbiddenBody: "You don't have permission to view this page.",
                 notFoundTitle: 'Page not found',
@@ -89,6 +94,7 @@ const resources = {
                 logout: 'Se déconnecter',
                 collapse: 'Réduire',
                 expand: 'Développer',
+                toggleTheme: 'Basculer le mode sombre',
             },
             common: {
                 save: 'Enregistrer',
@@ -118,6 +124,8 @@ const resources = {
                 dismiss: 'Ignorer',
             },
             errors: {
+                forbidden: 'Accès refusé',
+                generic: "Une erreur s'est produite",
                 forbiddenTitle: 'Accès refusé',
                 forbiddenBody: "Vous n'avez pas l'autorisation de consulter cette page.",
                 notFoundTitle: 'Page introuvable',

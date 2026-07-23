@@ -1,22 +1,24 @@
+import {
+    Box,
+    Button,
+    Chip,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Link,
+    OutlinedInput,
+    Stack,
+    TextField,
+    Typography,
+} from '@mui/material';
 import type { ColumnDef } from '@tanstack/react-table';
 import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '@zenon/core/apiClient';
 import { useBoot } from '@zenon/core/bootstrap';
 import { hasPermission } from '@zenon/core/permissions';
-import {
-    Badge,
-    Button,
-    DataTable,
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    Field,
-    Input,
-} from '@zenon/core/ui';
-import { ApiErrorAlert } from '../components/api-error-alert';
+import { ApiErrorAlert, DataTable, Field } from '@zenon/core/ui';
 import { RouteLink } from '../components/route-link';
 import { useCreateUser, useUsers } from '../api/users';
 import type { UserDto } from '../api/types';
@@ -36,9 +38,15 @@ export function UsersPage() {
             accessorKey: 'name',
             header: t('columns.name'),
             cell: ({ row }) => (
-                <RouteLink to="/users/$userId" params={{ userId: String(row.original.id) }} className="font-medium text-primary hover:underline">
+                <Link
+                    component={RouteLink}
+                    to="/users/$userId"
+                    params={{ userId: String(row.original.id) }}
+                    underline="hover"
+                    sx={{ fontWeight: 500 }}
+                >
                     {row.original.name}
-                </RouteLink>
+                </Link>
             ),
         },
         { accessorKey: 'email', header: t('columns.email') },
@@ -48,16 +56,14 @@ export function UsersPage() {
             cell: ({ row }) => {
                 const roles = row.original.roles ?? [];
                 if (roles.length === 0) {
-                    return <span className="text-muted-foreground">{t('shell:common.none')}</span>;
+                    return <Box component="span" sx={{ color: 'text.secondary' }}>{t('shell:common.none')}</Box>;
                 }
                 return (
-                    <div className="flex flex-wrap gap-1">
+                    <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
                         {roles.map((role) => (
-                            <Badge key={role} variant="secondary">
-                                {role}
-                            </Badge>
+                            <Chip key={role} size="small" label={role} />
                         ))}
-                    </div>
+                    </Stack>
                 );
             },
         },
@@ -69,20 +75,26 @@ export function UsersPage() {
     ];
 
     return (
-        <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between gap-4">
-                <h1 className="text-lg font-semibold">{t('users.title')}</h1>
-                {canCreate && <Button onClick={() => setCreateOpen(true)}>{t('users.create')}</Button>}
-            </div>
+        <Stack spacing={3}>
+            <Stack direction="row" spacing={2} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+                    {t('users.title')}
+                </Typography>
+                {canCreate && (
+                    <Button variant="contained" onClick={() => setCreateOpen(true)}>
+                        {t('users.create')}
+                    </Button>
+                )}
+            </Stack>
 
             {query.isError && <ApiErrorAlert error={query.error} />}
 
-            <Input
-                className="max-w-xs"
+            <TextField
+                sx={{ maxWidth: 320 }}
                 placeholder={t('users.searchPlaceholder')}
                 value={search}
-                onValueChange={(next) => {
-                    setSearch(next);
+                onChange={(event) => {
+                    setSearch(event.target.value);
                     setPage(1);
                 }}
             />
@@ -97,7 +109,7 @@ export function UsersPage() {
             />
 
             <CreateUserDialog open={createOpen} onOpenChange={setCreateOpen} />
-        </div>
+        </Stack>
     );
 }
 
@@ -118,46 +130,50 @@ function CreateUserDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
         });
     }
 
+    function close() {
+        setForm({ name: '', email: '', password: '' });
+        create.reset();
+        onOpenChange(false);
+    }
+
     return (
-        <Dialog
-            open={open}
-            onOpenChange={(next) => {
-                if (!next) {
-                    setForm({ name: '', email: '', password: '' });
-                    create.reset();
-                }
-                onOpenChange(next);
-            }}
-        >
+        <Dialog open={open} onClose={close} maxWidth="sm" fullWidth slotProps={{ paper: { component: 'form', onSubmit: submit } }}>
+            <DialogTitle>{t('users.create')}</DialogTitle>
             <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{t('users.create')}</DialogTitle>
-                </DialogHeader>
-                <form className="flex flex-col gap-4" onSubmit={submit}>
+                <Stack spacing={2.5} sx={{ pt: 0.5 }}>
                     <Field label={t('columns.name')} htmlFor="user-name" error={errors?.name}>
-                        <Input id="user-name" value={form.name} onValueChange={(next) => setForm((f) => ({ ...f, name: next }))} />
+                        <OutlinedInput
+                            id="user-name"
+                            value={form.name}
+                            onChange={(event) => setForm((f) => ({ ...f, name: event.target.value }))}
+                        />
                     </Field>
                     <Field label={t('columns.email')} htmlFor="user-email" error={errors?.email}>
-                        <Input id="user-email" type="email" value={form.email} onValueChange={(next) => setForm((f) => ({ ...f, email: next }))} />
+                        <OutlinedInput
+                            id="user-email"
+                            type="email"
+                            value={form.email}
+                            onChange={(event) => setForm((f) => ({ ...f, email: event.target.value }))}
+                        />
                     </Field>
                     <Field label={t('users.password')} htmlFor="user-password" error={errors?.password}>
-                        <Input
+                        <OutlinedInput
                             id="user-password"
                             type="password"
                             value={form.password}
-                            onValueChange={(next) => setForm((f) => ({ ...f, password: next }))}
+                            onChange={(event) => setForm((f) => ({ ...f, password: event.target.value }))}
                         />
                     </Field>
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={create.isPending}>
-                            {t('shell:common.cancel')}
-                        </Button>
-                        <Button type="submit" disabled={create.isPending}>
-                            {t('shell:common.create')}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                </Stack>
             </DialogContent>
+            <DialogActions>
+                <Button color="inherit" onClick={close} disabled={create.isPending}>
+                    {t('shell:common.cancel')}
+                </Button>
+                <Button type="submit" variant="contained" disabled={create.isPending}>
+                    {t('shell:common.create')}
+                </Button>
+            </DialogActions>
         </Dialog>
     );
 }

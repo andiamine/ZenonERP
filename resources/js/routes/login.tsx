@@ -1,22 +1,18 @@
+import Alert from '@mui/material/Alert';
+import AlertTitle from '@mui/material/AlertTitle';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { createRoute, redirect } from '@tanstack/react-router';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '@zenon/core/apiClient';
 import { useLogin } from '@zenon/core/auth';
 import { bootstrapQuery } from '@zenon/core/bootstrap';
-import {
-    Alert,
-    AlertDescription,
-    AlertTitle,
-    Button,
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-    Input,
-    Label,
-} from '@zenon/core/ui';
 import { rootRoute } from './__root';
 
 function LoginPage() {
@@ -35,54 +31,54 @@ function LoginPage() {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-background p-6">
-            <Card className="w-full max-w-sm">
-                <CardHeader>
-                    <CardTitle className="text-lg">{t('login.title')}</CardTitle>
-                    <CardDescription>{t('login.description')}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={submit} className="flex flex-col gap-4">
+        <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3, bgcolor: 'background.default' }}>
+            <Card variant="outlined" sx={{ width: '100%', maxWidth: 400 }}>
+                <CardContent sx={{ p: 4 }}>
+                    <Stack component="form" onSubmit={submit} spacing={3}>
+                        <Stack spacing={0.5}>
+                            <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+                                {t('login.title')}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                {t('login.description')}
+                            </Typography>
+                        </Stack>
                         {error !== null && (
-                            <Alert variant="destructive">
+                            <Alert severity="error">
                                 <AlertTitle>{t('login.failed')}</AlertTitle>
-                                <AlertDescription>
-                                    {fieldErrors.length > 0
-                                        ? fieldErrors.map((message) => <p key={message}>{message}</p>)
-                                        : error.message}
-                                </AlertDescription>
+                                {fieldErrors.length > 0
+                                    ? fieldErrors.map((message) => <div key={message}>{message}</div>)
+                                    : error.message}
                             </Alert>
                         )}
-                        <div className="flex flex-col gap-2">
-                            <Label htmlFor="email">{t('login.email')}</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                value={email}
-                                onChange={(event) => setEmail(event.target.value)}
-                                autoComplete="email"
-                                required
-                                autoFocus
-                            />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            <Label htmlFor="password">{t('login.password')}</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(event) => setPassword(event.target.value)}
-                                autoComplete="current-password"
-                                required
-                            />
-                        </div>
-                        <Button type="submit" disabled={login.isPending}>
+                        <TextField
+                            id="email"
+                            type="email"
+                            label={t('login.email')}
+                            value={email}
+                            onChange={(event) => setEmail(event.target.value)}
+                            autoComplete="email"
+                            required
+                            autoFocus
+                            fullWidth
+                        />
+                        <TextField
+                            id="password"
+                            type="password"
+                            label={t('login.password')}
+                            value={password}
+                            onChange={(event) => setPassword(event.target.value)}
+                            autoComplete="current-password"
+                            required
+                            fullWidth
+                        />
+                        <Button type="submit" variant="contained" fullWidth disabled={login.isPending}>
                             {login.isPending ? t('login.submitting') : t('login.submit')}
                         </Button>
-                    </form>
+                    </Stack>
                 </CardContent>
             </Card>
-        </div>
+        </Box>
     );
 }
 

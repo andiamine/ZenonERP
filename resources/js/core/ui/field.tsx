@@ -1,46 +1,50 @@
-import type { ComponentProps, ReactNode } from 'react';
-import { cn } from './cn';
-import { Label } from './label';
+import FormControl from '@mui/material/FormControl';
+import FormHelperText from '@mui/material/FormHelperText';
+import FormLabel from '@mui/material/FormLabel';
+import type { ReactNode } from 'react';
+import type { SxProps, Theme } from '@mui/material/styles';
 
-// Adapted from ReUI's field family (registry/bases/base/ui/field.tsx: FieldSet/FieldLegend/
-// FieldGroup/Field/FieldContent/FieldLabel/FieldDescription/FieldError/FieldSeparator) —
-// collapsed to the single wrapper the task brief asks for: `<Field label error children>`.
-// FieldError's array-flattening idea is kept (ApiError.errors[key] is string | string[]).
-export interface FieldProps extends Omit<ComponentProps<'div'>, 'children'> {
+/**
+ * Zenon form-row composite: `<Field label error children>` — the one place the
+ * `ApiError.errors[key]: string | string[]` contract is flattened for display. Built on
+ * MUI's FormControl context, so an OutlinedInput/Select/Checkbox child picks the error
+ * state up automatically; simple standalone inputs may use a bare `<TextField
+ * error helperText>` instead — Field earns its keep when the error is the API's
+ * string-array shape or the control isn't a TextField.
+ */
+export interface FieldProps {
     label?: ReactNode;
     htmlFor?: string;
     description?: ReactNode;
     error?: string | string[];
     children: ReactNode;
+    sx?: SxProps<Theme>;
+    className?: string;
 }
 
-function Field({ label, htmlFor, description, error, className, children, ...props }: FieldProps) {
+function Field({ label, htmlFor, description, error, sx, className, children }: FieldProps) {
     const errors = error === undefined ? [] : Array.isArray(error) ? error : [error];
 
     return (
-        <div data-slot="field" className={cn('flex w-full flex-col gap-1.5', className)} {...props}>
-            {label && <Label htmlFor={htmlFor}>{label}</Label>}
+        <FormControl fullWidth error={errors.length > 0} sx={sx} className={className}>
+            {label && <FormLabel htmlFor={htmlFor} sx={{ mb: 0.5, typography: 'body2', fontWeight: 500 }}>{label}</FormLabel>}
             {children}
             {errors.length > 0 ? (
-                <div data-slot="field-error" role="alert" className="text-sm font-normal text-destructive">
+                <FormHelperText role="alert" component="div" sx={{ mx: 0 }}>
                     {errors.length === 1 ? (
                         errors[0]
                     ) : (
-                        <ul className="ml-4 list-disc">
+                        <ul style={{ margin: 0, paddingInlineStart: '1.25em' }}>
                             {errors.map((message, index) => (
                                 <li key={index}>{message}</li>
                             ))}
                         </ul>
                     )}
-                </div>
+                </FormHelperText>
             ) : (
-                description && (
-                    <p data-slot="field-description" className="text-sm text-muted-foreground">
-                        {description}
-                    </p>
-                )
+                description && <FormHelperText sx={{ mx: 0 }}>{description}</FormHelperText>
             )}
-        </div>
+        </FormControl>
     );
 }
 

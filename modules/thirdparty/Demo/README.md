@@ -36,7 +36,7 @@ To rebuild the frontend after changing `resources/js/`:
 
 ```
 npm install       # first time only (or after a @zenon/module-kit / lockfile change)
-npm run build     # zenon-module build — compiles resources/js → dist/remoteEntry.js + CSS
+npm run build     # zenon-module build — compiles resources/js → dist/remoteEntry.js (no CSS: styling comes from the host's MUI theme at mount)
 ```
 
 To package and install the addon exactly as a marketplace zip-install would:

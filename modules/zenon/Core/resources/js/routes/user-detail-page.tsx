@@ -1,11 +1,24 @@
+import {
+    Box,
+    Button,
+    Card,
+    CardContent,
+    CardHeader,
+    Checkbox,
+    Chip,
+    Divider,
+    FormControlLabel,
+    Link,
+    Skeleton,
+    Stack,
+    Typography,
+} from '@mui/material';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBoot } from '@zenon/core/bootstrap';
 import { hasPermission } from '@zenon/core/permissions';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Checkbox, Separator, Skeleton } from '@zenon/core/ui';
-import { ApiErrorAlert } from '../components/api-error-alert';
-import { ConfirmDialog } from '../components/confirm-dialog';
+import { ApiErrorAlert, ConfirmDialog } from '@zenon/core/ui';
 import { RouteLink } from '../components/route-link';
 import { useDeleteUser, useSyncUserRoles, useUser } from '../api/users';
 import { useRoles } from '../api/roles';
@@ -28,7 +41,7 @@ export function UserDetailPage() {
     const canDelete = hasPermission(boot, 'core.users.delete');
 
     if (userQuery.isLoading) {
-        return <Skeleton className="h-48 w-full max-w-2xl" />;
+        return <Skeleton variant="rounded" height={192} sx={{ maxWidth: 672 }} />;
     }
 
     if (userQuery.isError || !userQuery.data) {
@@ -45,75 +58,85 @@ export function UserDetailPage() {
     }
 
     return (
-        <div className="flex max-w-2xl flex-col gap-6">
-            <div className="flex items-center gap-3">
-                <RouteLink to="/users" className="text-sm text-primary hover:underline">
+        <Stack spacing={3} sx={{ maxWidth: 672 }}>
+            <Box>
+                <Link component={RouteLink} to="/users" underline="hover" variant="body2">
                     ← {t('users.title')}
-                </RouteLink>
-            </div>
+                </Link>
+            </Box>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>{user.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-2 text-sm">
-                    <div className="flex gap-2">
-                        <span className="text-muted-foreground">{t('columns.email')}:</span>
-                        <span>{user.email}</span>
-                    </div>
-                    <div className="flex gap-2">
-                        <span className="text-muted-foreground">{t('columns.createdAt')}:</span>
-                        <span>{new Date(user.created_at).toLocaleString()}</span>
-                    </div>
+            <Card variant="outlined">
+                <CardHeader title={user.name} />
+                <CardContent>
+                    <Stack spacing={1}>
+                        <Stack direction="row" spacing={1}>
+                            <Typography variant="body2" color="text.secondary">
+                                {t('columns.email')}:
+                            </Typography>
+                            <Typography variant="body2">{user.email}</Typography>
+                        </Stack>
+                        <Stack direction="row" spacing={1}>
+                            <Typography variant="body2" color="text.secondary">
+                                {t('columns.createdAt')}:
+                            </Typography>
+                            <Typography variant="body2">{new Date(user.created_at).toLocaleString()}</Typography>
+                        </Stack>
+                    </Stack>
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm">{t('users.roles.title')}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-3">
-                    {syncRoles.isError && <ApiErrorAlert error={syncRoles.error} />}
+            <Card variant="outlined">
+                <CardHeader title={t('users.roles.title')} slotProps={{ title: { variant: 'subtitle2' } }} />
+                <CardContent>
+                    <Stack spacing={1.5}>
+                        {syncRoles.isError && <ApiErrorAlert error={syncRoles.error} />}
 
-                    {canAssign ? (
-                        allRoles.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">{t('roles.empty')}</p>
-                        ) : (
-                            <div className="flex flex-col gap-2">
-                                {allRoles.map((role) => (
-                                    <label key={role.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                                        <Checkbox
-                                            checked={assigned.includes(role.name)}
-                                            onCheckedChange={(checked) => toggleRole(role.name, checked)}
-                                            disabled={syncRoles.isPending}
+                        {canAssign ? (
+                            allRoles.length === 0 ? (
+                                <Typography variant="body2" color="text.secondary">
+                                    {t('roles.empty')}
+                                </Typography>
+                            ) : (
+                                <Stack spacing={0.5}>
+                                    {allRoles.map((role) => (
+                                        <FormControlLabel
+                                            key={role.id}
+                                            control={
+                                                <Checkbox
+                                                    size="small"
+                                                    checked={assigned.includes(role.name)}
+                                                    onChange={(event) => toggleRole(role.name, event.target.checked)}
+                                                    disabled={syncRoles.isPending}
+                                                />
+                                            }
+                                            label={<Typography variant="body2">{role.name}</Typography>}
                                         />
-                                        <span>{role.name}</span>
-                                    </label>
+                                    ))}
+                                </Stack>
+                            )
+                        ) : assigned.length === 0 ? (
+                            <Typography variant="body2" color="text.secondary">
+                                {t('shell:common.none')}
+                            </Typography>
+                        ) : (
+                            <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
+                                {assigned.map((role) => (
+                                    <Chip key={role} size="small" label={role} />
                                 ))}
-                            </div>
-                        )
-                    ) : assigned.length === 0 ? (
-                        <span className="text-sm text-muted-foreground">{t('shell:common.none')}</span>
-                    ) : (
-                        <div className="flex flex-wrap gap-1">
-                            {assigned.map((role) => (
-                                <Badge key={role} variant="secondary">
-                                    {role}
-                                </Badge>
-                            ))}
-                        </div>
-                    )}
+                            </Stack>
+                        )}
+                    </Stack>
                 </CardContent>
             </Card>
 
             {canDelete && (
                 <>
-                    <Separator />
-                    <div>
-                        <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+                    <Divider />
+                    <Box>
+                        <Button variant="contained" color="error" onClick={() => setDeleteOpen(true)}>
                             {t('users.delete')}
                         </Button>
-                    </div>
+                    </Box>
                     <ConfirmDialog
                         open={deleteOpen}
                         onOpenChange={(next) => {
@@ -137,6 +160,6 @@ export function UserDetailPage() {
                     />
                 </>
             )}
-        </div>
+        </Stack>
     );
 }

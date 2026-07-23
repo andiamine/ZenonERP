@@ -1,3 +1,18 @@
+import {
+    Box,
+    Button,
+    Chip,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    MenuItem,
+    OutlinedInput,
+    Select,
+    Stack,
+    Typography,
+} from '@mui/material';
+import type { SxProps, Theme } from '@mui/material';
 import type { ColumnDef } from '@tanstack/react-table';
 import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -5,28 +20,21 @@ import { ApiError } from '@zenon/core/apiClient';
 import { useBoot } from '@zenon/core/bootstrap';
 import { hasPermission } from '@zenon/core/permissions';
 import { useUiStore } from '@zenon/core/store';
-import {
-    Badge,
-    Button,
-    DataTable,
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    Field,
-    Input,
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@zenon/core/ui';
-import { ApiErrorAlert } from '../components/api-error-alert';
+import { ApiErrorAlert, DataTable, Field } from '@zenon/core/ui';
 import { useSequenceDefinitions, useSequences, useUpdateSequence } from '../api/sequences';
 import type { ResetPeriod, SequenceDefinitionDto, SequenceDto } from '../api/types';
 
 const RESET_PERIODS: ResetPeriod[] = ['never', 'year', 'month'];
+
+/** Inline `<code>` chip for masks/previews/tokens (the old `bg-muted` code style). */
+const codeSx: SxProps<Theme> = {
+    px: 0.5,
+    py: 0.25,
+    borderRadius: 0.5,
+    bgcolor: 'action.hover',
+    fontFamily: 'monospace',
+    fontSize: '0.75rem',
+};
 
 /**
  * Sequence administration (CLAUDE.md §9.2): materialized counters (rows drawn at least once)
@@ -59,7 +67,11 @@ export function SequencesPage() {
         {
             accessorKey: 'mask',
             header: t('columns.mask'),
-            cell: ({ row }) => <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">{row.original.mask}</code>,
+            cell: ({ row }) => (
+                <Box component="code" sx={codeSx}>
+                    {row.original.mask}
+                </Box>
+            ),
         },
         { accessorKey: 'next_number', header: t('columns.nextNumber') },
         {
@@ -70,18 +82,22 @@ export function SequencesPage() {
         {
             accessorKey: 'preview',
             header: t('columns.preview'),
-            cell: ({ row }) => <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">{row.original.preview}</code>,
+            cell: ({ row }) => (
+                <Box component="code" sx={codeSx}>
+                    {row.original.preview}
+                </Box>
+            ),
         },
         {
             id: 'actions',
             header: '',
             cell: ({ row }) =>
                 canUpdate ? (
-                    <div className="flex justify-end">
-                        <Button size="sm" variant="outline" onClick={() => setEditing(row.original)}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button size="small" variant="outlined" color="inherit" onClick={() => setEditing(row.original)}>
                             {t('shell:common.edit')}
                         </Button>
-                    </div>
+                    </Box>
                 ) : null,
         },
     ];
@@ -91,12 +107,21 @@ export function SequencesPage() {
         {
             accessorKey: 'label',
             header: t('columns.label'),
-            cell: ({ row }) => row.original.label ?? <span className="text-muted-foreground">—</span>,
+            cell: ({ row }) =>
+                row.original.label ?? (
+                    <Box component="span" sx={{ color: 'text.secondary' }}>
+                        —
+                    </Box>
+                ),
         },
         {
             accessorKey: 'mask',
             header: t('columns.mask'),
-            cell: ({ row }) => <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">{row.original.mask}</code>,
+            cell: ({ row }) => (
+                <Box component="code" sx={codeSx}>
+                    {row.original.mask}
+                </Box>
+            ),
         },
         {
             accessorKey: 'reset_period',
@@ -107,16 +132,18 @@ export function SequencesPage() {
             accessorKey: 'per_company',
             header: t('columns.perCompany'),
             cell: ({ row }) => (
-                <Badge variant={row.original.per_company ? 'success' : 'secondary'}>
-                    {row.original.per_company ? t('common.yes') : t('common.no')}
-                </Badge>
+                <Chip
+                    size="small"
+                    color={row.original.per_company ? 'success' : 'default'}
+                    label={row.original.per_company ? t('common.yes') : t('common.no')}
+                />
             ),
         },
         {
             accessorKey: 'gapless',
             header: t('columns.gapless'),
             cell: ({ row }) => (
-                <Badge variant={row.original.gapless ? 'success' : 'secondary'}>{row.original.gapless ? t('common.yes') : t('common.no')}</Badge>
+                <Chip size="small" color={row.original.gapless ? 'success' : 'default'} label={row.original.gapless ? t('common.yes') : t('common.no')} />
             ),
         },
         {
@@ -124,17 +151,19 @@ export function SequencesPage() {
             header: t('columns.materialized'),
             cell: ({ row }) =>
                 row.original.materialized ? (
-                    <Badge variant="success">{t('definitions.materialized')}</Badge>
+                    <Chip size="small" color="success" label={t('definitions.materialized')} />
                 ) : (
-                    <Badge variant="secondary">{t('definitions.notMaterialized')}</Badge>
+                    <Chip size="small" color="default" label={t('definitions.notMaterialized')} />
                 ),
         },
     ];
 
     return (
-        <div className="flex flex-col gap-8">
-            <div className="flex flex-col gap-4">
-                <h1 className="text-lg font-semibold">{t('sequences.title')}</h1>
+        <Stack spacing={4}>
+            <Stack spacing={2}>
+                <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+                    {t('sequences.title')}
+                </Typography>
 
                 {sequencesQuery.isError && <ApiErrorAlert error={sequencesQuery.error} />}
 
@@ -146,10 +175,12 @@ export function SequencesPage() {
                     isLoading={sequencesQuery.isLoading}
                     emptyMessage={t('sequences.empty')}
                 />
-            </div>
+            </Stack>
 
-            <div className="flex flex-col gap-4">
-                <h2 className="text-base font-semibold">{t('definitions.title')}</h2>
+            <Stack spacing={2}>
+                <Typography variant="h6" component="h2">
+                    {t('definitions.title')}
+                </Typography>
 
                 {definitionsQuery.isError && <ApiErrorAlert error={definitionsQuery.error} />}
 
@@ -159,10 +190,10 @@ export function SequencesPage() {
                     isLoading={definitionsQuery.isLoading}
                     emptyMessage={t('definitions.empty')}
                 />
-            </div>
+            </Stack>
 
             {editing && <EditSequenceDialog sequence={editing} onClose={() => setEditing(null)} />}
-        </div>
+        </Stack>
     );
 }
 
@@ -178,16 +209,36 @@ function TokenLegend() {
     ] as const;
 
     return (
-        <div className="flex flex-col gap-2">
-            <span className="text-xs font-medium text-muted-foreground">{t('tokens.legend')}</span>
-            <ul className="flex flex-col gap-1 rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+        <Stack spacing={1}>
+            <Typography variant="caption" sx={{ fontWeight: 500 }} color="text.secondary">
+                {t('tokens.legend')}
+            </Typography>
+            <Box
+                component="ul"
+                sx={{
+                    m: 0,
+                    p: 1.5,
+                    listStyle: 'none',
+                    display: 'grid',
+                    gap: 0.5,
+                    borderRadius: 1,
+                    border: 1,
+                    borderColor: 'divider',
+                    bgcolor: 'action.hover',
+                    typography: 'caption',
+                    color: 'text.secondary',
+                }}
+            >
                 {tokens.map(({ token, key }) => (
                     <li key={token}>
-                        <code className="rounded bg-muted px-1 py-0.5 font-mono text-foreground">{token}</code> — {t(key)}
+                        <Box component="code" sx={{ ...codeSx, bgcolor: 'action.selected', color: 'text.primary' }}>
+                            {token}
+                        </Box>{' '}
+                        — {t(key)}
                     </li>
                 ))}
-            </ul>
-        </div>
+            </Box>
+        </Stack>
     );
 }
 
@@ -212,16 +263,14 @@ function EditSequenceDialog({ sequence, onClose }: { sequence: SequenceDto; onCl
     }
 
     return (
-        <Dialog open onOpenChange={(next) => !next && onClose()}>
+        <Dialog open onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { component: 'form', onSubmit: submit } }}>
+            <DialogTitle>
+                {t('sequences.edit')} — {sequence.code}
+            </DialogTitle>
             <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>
-                        {t('sequences.edit')} — {sequence.code}
-                    </DialogTitle>
-                </DialogHeader>
-                <form className="flex flex-col gap-4" onSubmit={submit}>
+                <Stack spacing={2.5} sx={{ pt: 0.5 }}>
                     <Field label={t('columns.mask')} htmlFor="sequence-mask" error={fieldErrors?.mask}>
-                        <Input id="sequence-mask" value={mask} onValueChange={setMask} />
+                        <OutlinedInput id="sequence-mask" value={mask} onChange={(event) => setMask(event.target.value)} />
                     </Field>
 
                     <TokenLegend />
@@ -231,32 +280,25 @@ function EditSequenceDialog({ sequence, onClose }: { sequence: SequenceDto; onCl
                     <Field label={t('columns.resetPeriod')}>
                         <Select
                             value={resetPeriod}
-                            items={RESET_PERIODS.map((period) => ({ label: t(`resetPeriod.${period}`), value: period }))}
-                            onValueChange={(next) => next !== null && setResetPeriod(next as ResetPeriod)}
+                            onChange={(event) => setResetPeriod(event.target.value as ResetPeriod)}
                         >
-                            <SelectTrigger className="w-full">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {RESET_PERIODS.map((period) => (
-                                    <SelectItem key={period} value={period}>
-                                        {t(`resetPeriod.${period}`)}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
+                            {RESET_PERIODS.map((period) => (
+                                <MenuItem key={period} value={period}>
+                                    {t(`resetPeriod.${period}`)}
+                                </MenuItem>
+                            ))}
                         </Select>
                     </Field>
-
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={onClose} disabled={update.isPending}>
-                            {t('shell:common.cancel')}
-                        </Button>
-                        <Button type="submit" disabled={update.isPending}>
-                            {t('shell:common.save')}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                </Stack>
             </DialogContent>
+            <DialogActions>
+                <Button color="inherit" onClick={onClose} disabled={update.isPending}>
+                    {t('shell:common.cancel')}
+                </Button>
+                <Button type="submit" variant="contained" disabled={update.isPending}>
+                    {t('shell:common.save')}
+                </Button>
+            </DialogActions>
         </Dialog>
     );
 }

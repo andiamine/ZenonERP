@@ -6,6 +6,11 @@ Federation remote — `dist/remoteEntry.js` — that the ZenonERP host loads at 
 No server-side Node is needed to install an addon; the whole `dist/` directory ships
 inside the addon zip.
 
+**2.0.0** — the MUI migration release: the Tailwind pipeline (css/preset.css,
+css/tokens.css, the per-addon compiled stylesheet) is gone. Addons ship **no CSS**;
+all styling arrives at mount time through the host's MUI theme via the shared
+`@mui/material`/`@emotion` singletons. Addons built against kit 1.x must be rebuilt.
+
 ## Authoring a `vite.config.ts`
 
 ```ts
@@ -28,8 +33,9 @@ zenon-module build --watch
 Output (in `dist/`):
 - `remoteEntry.js` — the MF container entry, loaded by the host. Its `init(shareScope)`
   consumes the **host's** share scope (it does not spin up an isolated federation
-  instance), so react/`@zenon/core`/the TanStack libs/etc. resolve to the host's copies.
-- `assets/*` — the addon's compiled JS/CSS chunks plus the MF runtime-core glue
+  instance), so react/`@mui/material`/`@zenon/core`/the TanStack libs/etc. resolve to
+  the host's copies.
+- `assets/*` — the addon's compiled JS chunks plus the MF runtime-core glue
   (`dist-*.js`, ~60 KB) the container needs to `init`/`get`.
 - `mf-manifest.json` — the MF manifest (`manifest: true`)
 
@@ -43,36 +49,47 @@ Ship the whole `dist/` directory in the addon zip.
 
 ## Allowed imports
 
+- **`@mui/material` — ROOT BARREL ONLY** (`import { Button, Card } from '@mui/material';`).
+  The root barrel is the addon platform contract: it is a shared singleton served by the
+  host, and the host's theme styles everything. **Never import `@mui/material/<subpath>`**
+  — subpath share entries only exist for paths the host itself imports, so a subpath
+  import either bundles a private MUI copy into your addon or throws at mount.
+  Everything MUI-adjacent you need (`styled`, `useTheme`, `alpha`, …) is re-exported
+  from the root barrel.
+- **`@mui/icons-material/<IconName>`** subpath default imports (e.g.
+  `import AddOutlined from '@mui/icons-material/AddOutlined';`). Icons are **bundled
+  into your dist** (~1–2 KB each) — the icons package is deliberately not shared; the
+  `SvgIcon` runtime underneath resolves from the host (`@mui/material/SvgIcon` is an
+  explicit host share key). Never import the `@mui/icons-material` root barrel.
 - `@zenon/core` and its subpaths (`@zenon/core/ui`, `@zenon/core/apiClient`,
   `@zenon/core/permissions`, `@zenon/core/bootstrap`, `@zenon/core/store`,
   `@zenon/core/moduleTypes`) — shared singletons, consumed from the host.
+  `@zenon/core/ui` now holds Zenon composites only (DataTable, Field, ConfirmDialog,
+  ApiErrorAlert, NavIcon) — primitives come from `@mui/material`.
 - The host's framework singleton list: `react`, `react-dom` (and their subpath
-  entries), `@base-ui/react`, `@tanstack/react-router`, `@tanstack/react-query`,
-  `@tanstack/react-table`, `zustand`, `i18next`, `react-i18next`.
+  entries), `@tanstack/react-router`, `@tanstack/react-query`, `@tanstack/react-table`,
+  `zustand`, `i18next`, `react-i18next`.
+- Do **not** import `@emotion/react`, `@emotion/styled`, `@mui/system`, or
+  `@mui/styled-engine` — the Emotion engine is host-internal; style via `sx`/`styled`
+  from the `@mui/material` root barrel.
 - Everything else is allowed but gets bundled into the addon's own `dist/` output
   (discouraged — it bloats the addon and can't benefit from host caching/version
   pinning).
 
-react, `@zenon/core`, and the rest of the shared list are declared with
-`import: false` in the federation config — the kit never lets the addon bundle its
-own copy. This is deliberate: **the remote cannot run standalone**, only mounted
+react, `@mui/material`, `@zenon/core`, and the rest of the shared list are declared
+with `import: false` in the federation config — the kit never lets the addon bundle
+its own copy. This is deliberate: **the remote cannot run standalone**, only mounted
 inside a host that provides these singletons.
 
-## CSS
+## Styling
 
-An addon's stylesheet must consume the kit's preset rather than plain
-`@import 'tailwindcss'`:
-
-```css
-@import '@zenon/module-kit/css/preset.css';
-@source '../js';
-```
-
-(`@source` is relative to the CSS file — point it at the addon's `resources/js`
-directory.) This compiles the addon's utility classes against the host's design
-tokens (`css/tokens.css`, mirroring the host's `@theme inline` block) with preflight
-OFF — the host owns preflight/base styles, and re-emitting them from an addon would
-fight the host's cascade.
+There is no addon stylesheet. Style with MUI's `sx` prop / `styled` (from
+`@mui/material`) against the host theme's tokens (`color: 'text.secondary'`,
+`bgcolor: 'background.paper'`, `theme.palette.*`) — the host theme (light AND dark
+color schemes) applies to your components automatically at mount. Never create your
+own `ThemeProvider`. If an addon truly must ship a bespoke stylesheet, a plain CSS
+import still works (`bundleAllCSS: true` bundles it into the remote), but this is an
+escape hatch, not the pattern.
 
 ## Naming
 
@@ -112,15 +129,17 @@ In-repo (first-party-adjacent) addons point their `tsconfig.json` `paths` at
 `resources/js/core` directly for `@zenon/core` types. A standalone published types
 package for external, out-of-repo addon authors is planned but not yet available.
 
-## Build-time `@zenon/core`
+## Build-time resolution of shared packages
 
-Even though `@zenon/core` (and its `/ui`, `/apiClient`, … subpaths) is shared with
-`import: false` and never bundled, the addon build must still be able to **resolve** it:
-the federation plugin statically enumerates each shared module's named exports to generate
-the `import: false` re-export proxy. So `@zenon/core` must be present in the addon's
-`node_modules` at build time — add it as a `devDependency`:
+Even though `@mui/material` and `@zenon/core` (and its `/ui`, `/apiClient`, … subpaths)
+are shared with `import: false` and never bundled, the addon build must still be able
+to **resolve** them: the federation plugin statically enumerates each shared module's
+named exports to generate the `import: false` re-export proxy. So both must be present
+in the addon's `node_modules` at build time — add them as `devDependencies`:
 
+- `@mui/material` (+ `@emotion/react`, `@emotion/styled` peers, and
+  `@mui/icons-material` if you use icons) at the kit's pinned versions.
 - in-repo: `"@zenon/core": "file:../../../resources/js/core"`
 - external authors: the future published `@zenon/core` package.
 
-Without it the build fails with `MISSING_EXPORT` for the named UI imports.
+Without them the build fails with `MISSING_EXPORT` / unresolved-import errors.

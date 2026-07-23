@@ -1,6 +1,7 @@
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 import { useTranslation } from 'react-i18next';
 import { useUiStore } from './store';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui';
 import type { BootstrapData } from './moduleTypes';
 
 /**
@@ -22,26 +23,23 @@ export function CompanySwitcher({ boot }: { boot: BootstrapData }) {
     const value = currentCompanyId ?? boot.current_company_id;
 
     return (
-        <Select
-            value={value}
-            // Feeding `items` lets <SelectValue> render the company name (not the raw id).
-            items={boot.companies.map((company) => ({ label: company.name, value: company.id }))}
-            onValueChange={(next) => {
-                if (next !== null) {
+        <TextField
+            select
+            value={value ?? ''}
+            onChange={(event) => {
+                const next = Number(event.target.value);
+                if (!Number.isNaN(next)) {
                     setCompany(next);
                 }
             }}
+            sx={{ minWidth: 160 }}
+            slotProps={{ htmlInput: { 'aria-label': t('company.switcher') } }}
         >
-            <SelectTrigger size="sm" aria-label={t('company.switcher')}>
-                <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="end">
-                {boot.companies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                        {company.name}
-                    </SelectItem>
-                ))}
-            </SelectContent>
-        </Select>
+            {boot.companies.map((company) => (
+                <MenuItem key={company.id} value={company.id}>
+                    {company.name}
+                </MenuItem>
+            ))}
+        </TextField>
     );
 }

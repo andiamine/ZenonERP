@@ -2,7 +2,6 @@ import { federation } from '@module-federation/vite';
 // @module-federation/runtime is pinned to 2.8.0 in package.json. It MUST equal the version in
 // @module-federation/vite's own dependencies (1.18.2 → runtime 2.8.0) so npm dedupes to a single
 // runtime shared by the plugin and the host — upgrade both together.
-import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
 import path from 'node:path';
@@ -15,7 +14,6 @@ export default defineConfig({
             refresh: true,
         }),
         react(),
-        tailwindcss(),
         // Module Federation HOST (CLAUDE.md §7): present from Phase 4 so the host build
         // proves Router + MF compile together (§13). Remotes are registered at RUNTIME
         // in Phase 7 from bootstrap.remote_modules — none are configured here, ever.

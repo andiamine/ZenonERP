@@ -1,31 +1,36 @@
+import {
+    Box,
+    Button,
+    Chip,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+    MenuItem,
+    OutlinedInput,
+    Select,
+    Stack,
+    Typography,
+} from '@mui/material';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-    Badge,
-    Button,
-    DataTable,
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    Field,
-    Input,
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@zenon/core/ui';
-import { ApiErrorAlert } from '../components/api-error-alert';
+import { ApiErrorAlert, DataTable, Field } from '@zenon/core/ui';
 import { useActivity } from '../api/activity';
-import { eventBadgeVariant, formatPropertyValue } from '../lib/format';
+import { eventBadgeVariant, formatPropertyValue, type EventBadgeVariant } from '../lib/format';
 import type { ActivityDto } from '../api/types';
 
 const ALL_EVENTS = 'all';
 const EVENTS = ['created', 'updated', 'deleted'] as const;
+
+/** Old Badge-variant vocabulary (lib/format.ts) → MUI Chip color. */
+const CHIP_COLOR: Record<EventBadgeVariant, 'success' | 'info' | 'error' | 'default'> = {
+    success: 'success',
+    info: 'info',
+    destructive: 'error',
+    secondary: 'default',
+};
 
 /**
  * Activity log viewer (CLAUDE.md §9.2). Filters are LOCAL component state, not URL search
@@ -62,14 +67,23 @@ export function ActivityPage() {
         {
             id: 'causer',
             header: t('columns.causer'),
-            cell: ({ row }) => row.original.causer?.name ?? <span className="text-muted-foreground">{t('columns.system')}</span>,
+            cell: ({ row }) =>
+                row.original.causer?.name ?? (
+                    <Box component="span" sx={{ color: 'text.secondary' }}>
+                        {t('columns.system')}
+                    </Box>
+                ),
         },
         {
             accessorKey: 'event',
             header: t('columns.event'),
             cell: ({ row }) =>
                 row.original.event ? (
-                    <Badge variant={eventBadgeVariant(row.original.event)}>{t(`events.${row.original.event}`, { defaultValue: row.original.event })}</Badge>
+                    <Chip
+                        size="small"
+                        color={CHIP_COLOR[eventBadgeVariant(row.original.event)]}
+                        label={t(`events.${row.original.event}`, { defaultValue: row.original.event })}
+                    />
                 ) : null,
         },
         {
@@ -82,91 +96,84 @@ export function ActivityPage() {
             id: 'actions',
             header: '',
             cell: ({ row }) => (
-                <div className="flex justify-end">
-                    <Button size="sm" variant="outline" onClick={() => setViewing(row.original)}>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button size="small" variant="outlined" color="inherit" onClick={() => setViewing(row.original)}>
                         {t('activity.view')}
                     </Button>
-                </div>
+                </Box>
             ),
         },
     ];
 
     return (
-        <div className="flex flex-col gap-6">
-            <h1 className="text-lg font-semibold">{t('activity.title')}</h1>
+        <Stack spacing={3}>
+            <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+                {t('activity.title')}
+            </Typography>
 
-            <div className="flex flex-wrap items-end gap-3">
-                <Field label={t('filters.event')}>
+            <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', alignItems: 'flex-end', rowGap: 2 }}>
+                <Field label={t('filters.event')} sx={{ width: 160 }}>
                     <Select
                         value={event === '' ? ALL_EVENTS : event}
-                        items={[{ label: t('filters.allEvents'), value: ALL_EVENTS }, ...EVENTS.map((value) => ({ label: t(`events.${value}`), value }))]}
-                        onValueChange={(next) => {
-                            setEvent(next === null || next === ALL_EVENTS ? '' : (next as string));
+                        onChange={(next) => {
+                            const value = next.target.value;
+                            setEvent(value === ALL_EVENTS ? '' : value);
                             setPage(1);
                         }}
                     >
-                        <SelectTrigger className="w-40">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value={ALL_EVENTS}>{t('filters.allEvents')}</SelectItem>
-                            {EVENTS.map((value) => (
-                                <SelectItem key={value} value={value}>
-                                    {t(`events.${value}`)}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
+                        <MenuItem value={ALL_EVENTS}>{t('filters.allEvents')}</MenuItem>
+                        {EVENTS.map((value) => (
+                            <MenuItem key={value} value={value}>
+                                {t(`events.${value}`)}
+                            </MenuItem>
+                        ))}
                     </Select>
                 </Field>
 
-                <Field label={t('filters.subjectType')}>
-                    <Input
-                        className="w-40"
+                <Field label={t('filters.subjectType')} sx={{ width: 160 }}>
+                    <OutlinedInput
                         value={subjectType}
-                        onValueChange={(next) => {
-                            setSubjectType(next);
+                        onChange={(next) => {
+                            setSubjectType(next.target.value);
                             setPage(1);
                         }}
                         placeholder={t('filters.subjectTypePlaceholder')}
                     />
                 </Field>
 
-                <Field label={t('filters.causer')}>
-                    <Input
-                        className="w-32"
+                <Field label={t('filters.causer')} sx={{ width: 128 }}>
+                    <OutlinedInput
                         value={causerId}
-                        onValueChange={(next) => {
-                            setCauserId(next);
+                        onChange={(next) => {
+                            setCauserId(next.target.value);
                             setPage(1);
                         }}
                         placeholder={t('filters.causerPlaceholder')}
                     />
                 </Field>
 
-                <Field label={t('filters.from')}>
-                    <Input
+                <Field label={t('filters.from')} sx={{ width: 160 }}>
+                    <OutlinedInput
                         type="date"
-                        className="w-40"
                         value={from}
-                        onValueChange={(next) => {
-                            setFrom(next);
+                        onChange={(next) => {
+                            setFrom(next.target.value);
                             setPage(1);
                         }}
                     />
                 </Field>
 
-                <Field label={t('filters.to')}>
-                    <Input
+                <Field label={t('filters.to')} sx={{ width: 160 }}>
+                    <OutlinedInput
                         type="date"
-                        className="w-40"
                         value={to}
-                        onValueChange={(next) => {
-                            setTo(next);
+                        onChange={(next) => {
+                            setTo(next.target.value);
                             setPage(1);
                         }}
                     />
                 </Field>
-            </div>
+            </Stack>
 
             {query.isError && <ApiErrorAlert error={query.error} />}
 
@@ -180,7 +187,7 @@ export function ActivityPage() {
             />
 
             {viewing && <PropertiesDialog activity={viewing} onClose={() => setViewing(null)} />}
-        </div>
+        </Stack>
     );
 }
 
@@ -194,43 +201,50 @@ function PropertiesDialog({ activity, onClose }: { activity: ActivityDto; onClos
     const keys = Object.keys(isUpdate ? oldValues : newValues);
 
     return (
-        <Dialog open onOpenChange={(next) => !next && onClose()}>
-            <DialogContent className="max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>{t('activity.propertiesTitle')}</DialogTitle>
-                    <DialogDescription>
-                        {activity.subject_type ?? '—'}
-                        {activity.subject_id !== null ? `#${activity.subject_id}` : ''}
-                    </DialogDescription>
-                </DialogHeader>
+        <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
+            <DialogTitle>{t('activity.propertiesTitle')}</DialogTitle>
+            <DialogContent>
+                <DialogContentText sx={{ mb: 2 }}>
+                    {activity.subject_type ?? '—'}
+                    {activity.subject_id !== null ? `#${activity.subject_id}` : ''}
+                </DialogContentText>
                 {keys.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t('activity.noProperties')}</p>
+                    <Typography variant="body2" color="text.secondary">
+                        {t('activity.noProperties')}
+                    </Typography>
                 ) : (
-                    <dl className="flex flex-col gap-3 text-sm">
+                    <Stack component="dl" spacing={1.5} sx={{ m: 0 }}>
                         {keys.map((key) => (
-                            <div key={key} className="flex flex-col gap-1 border-b border-border pb-2 last:border-none">
-                                <dt className="font-medium">{key}</dt>
-                                <dd className="flex flex-col gap-0.5 text-muted-foreground">
+                            <Box key={key} sx={{ pb: 1.5, borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0, pb: 0 } }}>
+                                <Typography component="dt" variant="body2" sx={{ fontWeight: 500 }}>
+                                    {key}
+                                </Typography>
+                                <Typography component="dd" variant="body2" color="text.secondary" sx={{ m: 0, display: 'grid', gap: 0.25 }}>
                                     {isUpdate && (
                                         <span>
-                                            {t('activity.old')}: <span className="text-foreground">{formatPropertyValue(oldValues[key])}</span>
+                                            {t('activity.old')}:{' '}
+                                            <Box component="span" sx={{ color: 'text.primary' }}>
+                                                {formatPropertyValue(oldValues[key])}
+                                            </Box>
                                         </span>
                                     )}
                                     <span>
                                         {isUpdate ? `${t('activity.new')}: ` : ''}
-                                        <span className="text-foreground">{formatPropertyValue(newValues[key])}</span>
+                                        <Box component="span" sx={{ color: 'text.primary' }}>
+                                            {formatPropertyValue(newValues[key])}
+                                        </Box>
                                     </span>
-                                </dd>
-                            </div>
+                                </Typography>
+                            </Box>
                         ))}
-                    </dl>
+                    </Stack>
                 )}
-                <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>
-                        {t('shell:common.cancel')}
-                    </Button>
-                </DialogFooter>
             </DialogContent>
+            <DialogActions>
+                <Button color="inherit" onClick={onClose}>
+                    {t('shell:common.cancel')}
+                </Button>
+            </DialogActions>
         </Dialog>
     );
 }

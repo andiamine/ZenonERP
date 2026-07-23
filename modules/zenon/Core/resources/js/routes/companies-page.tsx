@@ -1,29 +1,24 @@
+import {
+    Button,
+    Chip,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    MenuItem,
+    OutlinedInput,
+    Select,
+    Stack,
+    Switch,
+    Typography,
+} from '@mui/material';
 import type { ColumnDef } from '@tanstack/react-table';
 import { type FormEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '@zenon/core/apiClient';
 import { useBoot } from '@zenon/core/bootstrap';
 import { hasPermission } from '@zenon/core/permissions';
-import {
-    Badge,
-    Button,
-    DataTable,
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    Field,
-    Input,
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-    Switch,
-} from '@zenon/core/ui';
-import { ApiErrorAlert } from '../components/api-error-alert';
-import { ConfirmDialog } from '../components/confirm-dialog';
+import { ApiErrorAlert, ConfirmDialog, DataTable, Field } from '@zenon/core/ui';
 import { useCompanies, useCreateCompany, useDeleteCompany, useUpdateCompany } from '../api/companies';
 import { useCurrencies } from '../api/currencies';
 import type { CompanyDto } from '../api/types';
@@ -50,27 +45,28 @@ export function CompaniesPage() {
         {
             accessorKey: 'is_default',
             header: t('columns.default'),
-            cell: ({ row }) => (row.original.is_default ? <Badge variant="info">{t('companies.default')}</Badge> : null),
+            cell: ({ row }) => (row.original.is_default ? <Chip size="small" color="info" label={t('companies.default')} /> : null),
         },
         {
             accessorKey: 'active',
             header: t('columns.active'),
             cell: ({ row }) =>
                 row.original.active ? (
-                    <Badge variant="success">{t('status.active')}</Badge>
+                    <Chip size="small" color="success" label={t('status.active')} />
                 ) : (
-                    <Badge variant="secondary">{t('status.inactive')}</Badge>
+                    <Chip size="small" label={t('status.inactive')} />
                 ),
         },
         {
             id: 'actions',
             header: '',
             cell: ({ row }) => (
-                <div className="flex justify-end gap-2">
+                <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
                     {canUpdate && (
                         <Button
-                            size="sm"
-                            variant="outline"
+                            size="small"
+                            variant="outlined"
+                            color="inherit"
                             onClick={() => {
                                 setEditing(row.original);
                                 setDialogOpen(true);
@@ -80,21 +76,24 @@ export function CompaniesPage() {
                         </Button>
                     )}
                     {canDelete && (
-                        <Button size="sm" variant="ghost" onClick={() => setDeleting(row.original)}>
+                        <Button size="small" color="inherit" onClick={() => setDeleting(row.original)}>
                             {t('shell:common.delete')}
                         </Button>
                     )}
-                </div>
+                </Stack>
             ),
         },
     ];
 
     return (
-        <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between gap-4">
-                <h1 className="text-lg font-semibold">{t('companies.title')}</h1>
+        <Stack spacing={3}>
+            <Stack direction="row" spacing={2} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+                    {t('companies.title')}
+                </Typography>
                 {canCreate && (
                     <Button
+                        variant="contained"
                         onClick={() => {
                             setEditing(null);
                             setDialogOpen(true);
@@ -103,7 +102,7 @@ export function CompaniesPage() {
                         {t('companies.create')}
                     </Button>
                 )}
-            </div>
+            </Stack>
 
             {query.isError && <ApiErrorAlert error={query.error} />}
 
@@ -136,7 +135,7 @@ export function CompaniesPage() {
                     }
                 }}
             />
-        </div>
+        </Stack>
     );
 }
 
@@ -188,67 +187,64 @@ function CompanyDialog({ open, onOpenChange, company }: { open: boolean; onOpenC
         }
     }
 
+    function close() {
+        mutation.reset();
+        onOpenChange(false);
+    }
+
     return (
-        <Dialog
-            open={open}
-            onOpenChange={(next) => {
-                if (!next) {
-                    mutation.reset();
-                }
-                onOpenChange(next);
-            }}
-        >
-            <DialogContent className="max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>{company ? t('companies.edit') : t('companies.create')}</DialogTitle>
-                </DialogHeader>
-                <form className="flex flex-col gap-4" onSubmit={submit}>
+        <Dialog open={open} onClose={close} maxWidth="sm" fullWidth slotProps={{ paper: { component: 'form', onSubmit: submit } }}>
+            <DialogTitle>{company ? t('companies.edit') : t('companies.create')}</DialogTitle>
+            <DialogContent>
+                <Stack spacing={2.5} sx={{ pt: 0.5 }}>
                     <Field label={t('columns.name')} htmlFor="company-name" error={errors?.name}>
-                        <Input id="company-name" value={name} onValueChange={setName} />
+                        <OutlinedInput id="company-name" value={name} onChange={(event) => setName(event.target.value)} />
                     </Field>
                     <Field label={t('columns.code')} htmlFor="company-code" error={errors?.code}>
-                        <Input id="company-code" value={code} onValueChange={setCode} />
+                        <OutlinedInput id="company-code" value={code} onChange={(event) => setCode(event.target.value)} />
                     </Field>
                     <Field label={t('columns.currency')} error={errors?.currency_code}>
                         <Select
-                            value={currencyCode || null}
-                            items={currencies.map((currency) => ({ label: `${currency.code} — ${currency.name}`, value: currency.code }))}
-                            onValueChange={(next) => setCurrencyCode(next === null ? '' : (next as string))}
+                            displayEmpty
+                            value={currencyCode}
+                            onChange={(event) => setCurrencyCode(event.target.value)}
                         >
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder={t('companies.currencyPlaceholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {currencies.map((currency) => (
-                                    <SelectItem key={currency.code} value={currency.code}>
-                                        {currency.code} — {currency.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
+                            <MenuItem value="" disabled>
+                                <em>{t('companies.currencyPlaceholder')}</em>
+                            </MenuItem>
+                            {currencies.map((currency) => (
+                                <MenuItem key={currency.code} value={currency.code}>
+                                    {currency.code} — {currency.name}
+                                </MenuItem>
+                            ))}
                         </Select>
                     </Field>
                     <Field label={t('companies.legalName')} htmlFor="company-legal" error={errors?.legal_name}>
-                        <Input id="company-legal" value={legalName} onValueChange={setLegalName} />
+                        <OutlinedInput id="company-legal" value={legalName} onChange={(event) => setLegalName(event.target.value)} />
                     </Field>
                     <Field label={t('companies.countryCode')} htmlFor="company-country" error={errors?.country_code}>
-                        <Input id="company-country" value={countryCode} onValueChange={setCountryCode} />
+                        <OutlinedInput id="company-country" value={countryCode} onChange={(event) => setCountryCode(event.target.value)} />
                     </Field>
                     <Field label={t('companies.timezone')} htmlFor="company-timezone" error={errors?.timezone}>
-                        <Input id="company-timezone" value={timezone} onValueChange={setTimezone} />
+                        <OutlinedInput id="company-timezone" value={timezone} onChange={(event) => setTimezone(event.target.value)} />
                     </Field>
                     <Field label={t('columns.active')}>
-                        <Switch checked={active} onCheckedChange={setActive} />
+                        <Switch
+                            checked={active}
+                            onChange={(event) => setActive(event.target.checked)}
+                            sx={{ alignSelf: 'flex-start' }}
+                        />
                     </Field>
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
-                            {t('shell:common.cancel')}
-                        </Button>
-                        <Button type="submit" disabled={mutation.isPending}>
-                            {t('shell:common.save')}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                </Stack>
             </DialogContent>
+            <DialogActions>
+                <Button color="inherit" onClick={close} disabled={mutation.isPending}>
+                    {t('shell:common.cancel')}
+                </Button>
+                <Button type="submit" variant="contained" disabled={mutation.isPending}>
+                    {t('shell:common.save')}
+                </Button>
+            </DialogActions>
         </Dialog>
     );
 }

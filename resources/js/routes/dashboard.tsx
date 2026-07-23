@@ -1,9 +1,15 @@
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import CardHeader from '@mui/material/CardHeader';
+import CircularProgress from '@mui/material/CircularProgress';
+import Grid from '@mui/material/Grid';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { createRoute } from '@tanstack/react-router';
 import { lazy, Suspense, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BootstrapData, DashboardWidget, ZenonModule } from '@zenon/core/moduleTypes';
 import { hasPermission } from '@zenon/core/permissions';
-import { Card, CardContent, CardHeader, CardTitle, Spinner } from '@zenon/core/ui';
 import { appLayoutRoute } from './app-layout';
 
 function WidgetSlot({ widget }: { widget: DashboardWidget }) {
@@ -11,12 +17,10 @@ function WidgetSlot({ widget }: { widget: DashboardWidget }) {
     const Component = useMemo(() => lazy(widget.component), [widget]);
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="text-sm">{t(widget.titleKey)}</CardTitle>
-            </CardHeader>
+        <Card variant="outlined" sx={{ height: '100%' }}>
+            <CardHeader title={t(widget.titleKey)} slotProps={{ title: { variant: 'subtitle2' } }} sx={{ pb: 0 }} />
             <CardContent>
-                <Suspense fallback={<Spinner />}>
+                <Suspense fallback={<CircularProgress size={20} />}>
                     <Component />
                 </Suspense>
             </CardContent>
@@ -36,18 +40,24 @@ function DashboardPage() {
         .filter((widget) => widget.permission === undefined || hasPermission(boot, widget.permission));
 
     return (
-        <div className="flex flex-col gap-6">
-            <h1 className="text-lg font-semibold">{t('dashboard.title')}</h1>
+        <Stack spacing={3}>
+            <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+                {t('dashboard.title')}
+            </Typography>
             {widgets.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t('dashboard.empty')}</p>
+                <Typography variant="body2" color="text.secondary">
+                    {t('dashboard.empty')}
+                </Typography>
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Grid container spacing={2}>
                     {widgets.map((widget) => (
-                        <WidgetSlot key={widget.id} widget={widget} />
+                        <Grid key={widget.id} size={{ xs: 12, sm: 6, lg: 4 }}>
+                            <WidgetSlot widget={widget} />
+                        </Grid>
                     ))}
-                </div>
+                </Grid>
             )}
-        </div>
+        </Stack>
     );
 }
 

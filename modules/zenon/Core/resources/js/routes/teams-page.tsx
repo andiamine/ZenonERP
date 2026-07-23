@@ -1,30 +1,27 @@
+import {
+    Box,
+    Button,
+    Checkbox,
+    Chip,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    FormControlLabel,
+    MenuItem,
+    OutlinedInput,
+    Select,
+    Stack,
+    Switch,
+    Typography,
+} from '@mui/material';
 import type { ColumnDef } from '@tanstack/react-table';
 import { type FormEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '@zenon/core/apiClient';
 import { useBoot } from '@zenon/core/bootstrap';
 import { hasPermission } from '@zenon/core/permissions';
-import {
-    Badge,
-    Button,
-    Checkbox,
-    DataTable,
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    Field,
-    Input,
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-    Switch,
-} from '@zenon/core/ui';
-import { ApiErrorAlert } from '../components/api-error-alert';
-import { ConfirmDialog } from '../components/confirm-dialog';
+import { ApiErrorAlert, ConfirmDialog, DataTable, Field } from '@zenon/core/ui';
 import { useCreateTeam, useDeleteTeam, useSyncTeamMembers, useTeams, useUpdateTeam } from '../api/teams';
 import { useUsers } from '../api/users';
 import type { TeamDto } from '../api/types';
@@ -59,7 +56,7 @@ export function TeamsPage() {
         {
             accessorKey: 'description',
             header: t('columns.description'),
-            cell: ({ row }) => row.original.description ?? <span className="text-muted-foreground">—</span>,
+            cell: ({ row }) => row.original.description ?? <Box component="span" sx={{ color: 'text.secondary' }}>—</Box>,
         },
         { id: 'company', header: t('columns.company'), cell: ({ row }) => companyName(row.original.company_id) },
         {
@@ -67,25 +64,26 @@ export function TeamsPage() {
             header: t('columns.active'),
             cell: ({ row }) =>
                 row.original.active ? (
-                    <Badge variant="success">{t('status.active')}</Badge>
+                    <Chip size="small" color="success" label={t('status.active')} />
                 ) : (
-                    <Badge variant="secondary">{t('status.inactive')}</Badge>
+                    <Chip size="small" label={t('status.inactive')} />
                 ),
         },
         {
             id: 'actions',
             header: '',
             cell: ({ row }) => (
-                <div className="flex justify-end gap-2">
+                <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
                     {canUpdate && (
-                        <Button size="sm" variant="outline" onClick={() => setMembers(row.original)}>
+                        <Button size="small" variant="outlined" color="inherit" onClick={() => setMembers(row.original)}>
                             {t('teams.members')}
                         </Button>
                     )}
                     {canUpdate && (
                         <Button
-                            size="sm"
-                            variant="outline"
+                            size="small"
+                            variant="outlined"
+                            color="inherit"
                             onClick={() => {
                                 setEditing(row.original);
                                 setDialogOpen(true);
@@ -95,21 +93,24 @@ export function TeamsPage() {
                         </Button>
                     )}
                     {canDelete && (
-                        <Button size="sm" variant="ghost" onClick={() => setDeleting(row.original)}>
+                        <Button size="small" color="inherit" onClick={() => setDeleting(row.original)}>
                             {t('shell:common.delete')}
                         </Button>
                     )}
-                </div>
+                </Stack>
             ),
         },
     ];
 
     return (
-        <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between gap-4">
-                <h1 className="text-lg font-semibold">{t('teams.title')}</h1>
+        <Stack spacing={3}>
+            <Stack direction="row" spacing={2} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+                    {t('teams.title')}
+                </Typography>
                 {canCreate && (
                     <Button
+                        variant="contained"
                         onClick={() => {
                             setEditing(null);
                             setDialogOpen(true);
@@ -118,7 +119,7 @@ export function TeamsPage() {
                         {t('teams.create')}
                     </Button>
                 )}
-            </div>
+            </Stack>
 
             {query.isError && <ApiErrorAlert error={query.error} />}
 
@@ -152,7 +153,7 @@ export function TeamsPage() {
                     }
                 }}
             />
-        </div>
+        </Stack>
     );
 }
 
@@ -189,62 +190,55 @@ function TeamDialog({ open, onOpenChange, team }: { open: boolean; onOpenChange:
         }
     }
 
+    function close() {
+        mutation.reset();
+        onOpenChange(false);
+    }
+
     return (
-        <Dialog
-            open={open}
-            onOpenChange={(next) => {
-                if (!next) {
-                    mutation.reset();
-                }
-                onOpenChange(next);
-            }}
-        >
+        <Dialog open={open} onClose={close} maxWidth="sm" fullWidth slotProps={{ paper: { component: 'form', onSubmit: submit } }}>
+            <DialogTitle>{team ? t('teams.edit') : t('teams.create')}</DialogTitle>
             <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{team ? t('teams.edit') : t('teams.create')}</DialogTitle>
-                </DialogHeader>
-                <form className="flex flex-col gap-4" onSubmit={submit}>
+                <Stack spacing={2.5} sx={{ pt: 0.5 }}>
                     <Field label={t('columns.name')} htmlFor="team-name" error={errors?.name}>
-                        <Input id="team-name" value={name} onValueChange={setName} />
+                        <OutlinedInput id="team-name" value={name} onChange={(event) => setName(event.target.value)} />
                     </Field>
                     <Field label={t('columns.description')} htmlFor="team-description" error={errors?.description}>
-                        <Input id="team-description" value={description} onValueChange={setDescription} />
+                        <OutlinedInput id="team-description" value={description} onChange={(event) => setDescription(event.target.value)} />
                     </Field>
                     <Field label={t('columns.company')} error={errors?.company_id}>
                         <Select
                             value={companyId === null ? SHARED : String(companyId)}
-                            items={[
-                                { label: t('teams.shared'), value: SHARED },
-                                ...boot.companies.map((company) => ({ label: company.name, value: String(company.id) })),
-                            ]}
-                            onValueChange={(next) => setCompanyId(next === SHARED || next === null ? null : Number(next))}
+                            onChange={(event) => {
+                                const next = event.target.value;
+                                setCompanyId(next === SHARED ? null : Number(next));
+                            }}
                         >
-                            <SelectTrigger className="w-full">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={SHARED}>{t('teams.shared')}</SelectItem>
-                                {boot.companies.map((company) => (
-                                    <SelectItem key={company.id} value={String(company.id)}>
-                                        {company.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
+                            <MenuItem value={SHARED}>{t('teams.shared')}</MenuItem>
+                            {boot.companies.map((company) => (
+                                <MenuItem key={company.id} value={String(company.id)}>
+                                    {company.name}
+                                </MenuItem>
+                            ))}
                         </Select>
                     </Field>
                     <Field label={t('columns.active')}>
-                        <Switch checked={active} onCheckedChange={setActive} />
+                        <Switch
+                            checked={active}
+                            onChange={(event) => setActive(event.target.checked)}
+                            sx={{ alignSelf: 'flex-start' }}
+                        />
                     </Field>
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
-                            {t('shell:common.cancel')}
-                        </Button>
-                        <Button type="submit" disabled={mutation.isPending}>
-                            {t('shell:common.save')}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                </Stack>
             </DialogContent>
+            <DialogActions>
+                <Button color="inherit" onClick={close} disabled={mutation.isPending}>
+                    {t('shell:common.cancel')}
+                </Button>
+                <Button type="submit" variant="contained" disabled={mutation.isPending}>
+                    {t('shell:common.save')}
+                </Button>
+            </DialogActions>
         </Dialog>
     );
 }
@@ -268,37 +262,49 @@ function TeamMembersDialog({ team, onClose }: { team: TeamDto; onClose: () => vo
     }
 
     return (
-        <Dialog open onOpenChange={(next) => !next && onClose()}>
-            <DialogContent className="max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>
-                        {t('teams.members')} — {team.name}
-                    </DialogTitle>
-                </DialogHeader>
-                {sync.isError && <ApiErrorAlert error={sync.error} />}
-                <div className="flex flex-col gap-2">
-                    {(usersQuery.data?.data ?? []).map((user) => (
-                        <label key={user.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                            <Checkbox checked={selected.has(user.id)} onCheckedChange={(checked) => toggle(user.id, checked)} />
-                            <span>
-                                {user.name} <span className="text-muted-foreground">({user.email})</span>
-                            </span>
-                        </label>
-                    ))}
-                </div>
-                <DialogFooter>
-                    <Button type="button" variant="outline" onClick={onClose} disabled={sync.isPending}>
-                        {t('shell:common.cancel')}
-                    </Button>
-                    <Button
-                        type="button"
-                        disabled={sync.isPending}
-                        onClick={() => sync.mutate({ id: team.id, userIds: [...selected] }, { onSuccess: onClose })}
-                    >
-                        {t('shell:common.save')}
-                    </Button>
-                </DialogFooter>
+        <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
+            <DialogTitle>
+                {t('teams.members')} — {team.name}
+            </DialogTitle>
+            <DialogContent>
+                <Stack spacing={2} sx={{ pt: 0.5 }}>
+                    {sync.isError && <ApiErrorAlert error={sync.error} />}
+                    <Stack spacing={0.5}>
+                        {(usersQuery.data?.data ?? []).map((user) => (
+                            <FormControlLabel
+                                key={user.id}
+                                control={
+                                    <Checkbox
+                                        size="small"
+                                        checked={selected.has(user.id)}
+                                        onChange={(event) => toggle(user.id, event.target.checked)}
+                                    />
+                                }
+                                label={
+                                    <Typography variant="body2" component="span">
+                                        {user.name}{' '}
+                                        <Box component="span" sx={{ color: 'text.secondary' }}>
+                                            ({user.email})
+                                        </Box>
+                                    </Typography>
+                                }
+                            />
+                        ))}
+                    </Stack>
+                </Stack>
             </DialogContent>
+            <DialogActions>
+                <Button color="inherit" onClick={onClose} disabled={sync.isPending}>
+                    {t('shell:common.cancel')}
+                </Button>
+                <Button
+                    variant="contained"
+                    disabled={sync.isPending}
+                    onClick={() => sync.mutate({ id: team.id, userIds: [...selected] }, { onSuccess: onClose })}
+                >
+                    {t('shell:common.save')}
+                </Button>
+            </DialogActions>
         </Dialog>
     );
 }

@@ -28,7 +28,9 @@ function render(node: ReactNode): void {
     // is none (MUI is the only styling system).
     createRoot(document.getElementById('root')!).render(
         <StrictMode>
-            <ThemeProvider theme={theme}>
+            {/* defaultMode="system": MUI owns dark mode (localStorage 'mui-mode'); the
+                pre-hydration script in app.blade.php mirrors this exact resolution. */}
+            <ThemeProvider theme={theme} defaultMode="system">
                 <CssBaseline enableColorScheme />
                 {node}
             </ThemeProvider>

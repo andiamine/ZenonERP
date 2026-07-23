@@ -5,15 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ config('app.name', 'ZenonERP') }}</title>
     <script>
-        // Pre-hydration dark mode (class strategy) — applied before paint so there is no
-        // flash. Pairs with core/store.ts and the MUI theme's cssVariables
-        // colorSchemeSelector: 'class' (core/theme.ts): MUI emits its dark-scheme CSS
-        // variables under this same .dark class on <html>.
+        // Pre-hydration dark mode — applied before paint so there is no flash. This is the
+        // Blade-shell equivalent of MUI's InitColorSchemeScript: dark mode is MUI-OWNED
+        // (useColorScheme, localStorage 'mui-mode', ThemeProvider defaultMode="system"),
+        // and the ThemeProvider re-applies the .light/.dark class on <html> itself after
+        // hydration — this script only pre-seeds the same class MUI will assert, using the
+        // same storage key and system-preference fallback. Never toggle the class from app
+        // code (a parallel toggle fights MUI's mode manager and loses).
         try {
-            var theme = localStorage.getItem('zenon.theme');
-            if (theme === 'dark' || (theme === null && matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
+            var mode = localStorage.getItem('mui-mode') || 'system';
+            if (mode === 'system') {
+                mode = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             }
+            document.documentElement.classList.add(mode);
         } catch (e) {}
     </script>
     {{-- The manifest-exists guard is load-bearing: the PHP test suite and CI's PHP job run build-less. --}}

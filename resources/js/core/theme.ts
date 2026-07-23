@@ -11,10 +11,12 @@ import { createTheme } from '@mui/material/styles';
  *
  * - `colorSchemes: { light, dark }` = MUI's default palettes. A future brand color is a
  *   one-line `palette.primary` override per scheme.
- * - `cssVariables.colorSchemeSelector: 'class'` emits dark-scheme variables under the `.dark`
- *   class on <html> — the exact class the pre-hydration script in app.blade.php and
- *   store.ts's setTheme already toggle. Neither knows MUI exists; do not adopt
- *   useColorScheme/InitColorSchemeScript.
+ * - `cssVariables.colorSchemeSelector: 'class'` emits scheme variables under `.light`/`.dark`
+ *   classes on <html>. MUI OWNS that class AND the mode state (useColorScheme, localStorage
+ *   'mui-mode', ThemeProvider defaultMode="system") — the ThemeProvider re-asserts the class
+ *   after hydration, so app code must never toggle it directly (root-caused live during the
+ *   migration: a parallel store-driven toggle gets overwritten). The pre-hydration script in
+ *   app.blade.php mirrors MUI's init resolution for a flash-free first paint.
  * - Typography stays MUI's Roboto-first stack WITHOUT shipping the Roboto webfont — it falls
  *   back to Helvetica/Arial/system. Adding @fontsource/roboto later is a deliberate decision,
  *   not a default.

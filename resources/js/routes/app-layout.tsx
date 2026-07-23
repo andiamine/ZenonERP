@@ -6,6 +6,7 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
+import { useColorScheme } from '@mui/material/styles';
 import DarkModeOutlined from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlined from '@mui/icons-material/LightModeOutlined';
 import MenuOutlined from '@mui/icons-material/MenuOutlined';
@@ -44,8 +45,10 @@ export const appLayoutRoute = createRoute({
 /**
  * The canonical MUI dashboard shell (MUI migration, 2026-07): fixed neutral AppBar over a
  * permanent mini-variant Drawer. The AppBar menu button drives the drawer's collapse
- * (store-persisted); the dark toggle flips the `.dark` class via store.setTheme, which the
- * theme's cssVariables colorSchemeSelector picks up.
+ * (store-persisted). Dark mode is MUI-OWNED: useColorScheme + the 'mui-mode' localStorage
+ * key — the ThemeProvider applies the .light/.dark class on <html> itself, so no app code
+ * may toggle that class (a parallel toggle fights MUI's mode manager and loses; the
+ * pre-hydration script in app.blade.php mirrors MUI's own init logic for flash-free load).
  */
 function AppShell() {
     const { t } = useTranslation();
@@ -54,8 +57,8 @@ function AppShell() {
     const logout = useLogout();
     const navCollapsed = useUiStore((state) => state.navCollapsed);
     const toggleNav = useUiStore((state) => state.toggleNav);
-    const theme = useUiStore((state) => state.theme);
-    const setTheme = useUiStore((state) => state.setTheme);
+    const { mode, systemMode, setMode } = useColorScheme();
+    const resolvedMode = mode === 'system' ? systemMode : mode;
 
     return (
         <Box sx={{ display: 'flex', minHeight: '100vh' }}>
@@ -87,10 +90,10 @@ function AppShell() {
                     <Box sx={{ flexGrow: 1 }} />
                     <CompanySwitcher boot={boot} />
                     <IconButton
-                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        onClick={() => setMode(resolvedMode === 'dark' ? 'light' : 'dark')}
                         aria-label={t('nav.toggleTheme')}
                     >
-                        {theme === 'dark' ? <LightModeOutlined /> : <DarkModeOutlined />}
+                        {resolvedMode === 'dark' ? <LightModeOutlined /> : <DarkModeOutlined />}
                     </IconButton>
                     <Typography variant="body2" color="text.secondary">
                         {boot.user.name}

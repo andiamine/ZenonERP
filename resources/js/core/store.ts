@@ -3,19 +3,17 @@ import type { RemoteModuleNotice } from './moduleTypes';
 
 /**
  * UI state ONLY (CLAUDE.md §7) — server state lives in TanStack Query.
- * Theme pairs with the pre-hydration script in app.blade.php ('zenon.theme').
+ * Dark mode is NOT here: MUI owns it (useColorScheme + the 'mui-mode' localStorage key;
+ * the ThemeProvider applies the .light/.dark class on <html> itself — a parallel store
+ * slice would fight it, root-caused live during the MUI migration).
  * localStorage is per-origin = per-tenant subdomain, so persisted keys isolate for free.
  */
-type Theme = 'light' | 'dark';
-
 const COMPANY_KEY = 'zenon.companyId';
 const NAV_KEY = 'zenon.nav';
 
 interface UiState {
     navCollapsed: boolean;
     toggleNav: () => void;
-    theme: Theme;
-    setTheme: (theme: Theme) => void;
     /** The company whose data the tenant is currently viewing (sent as X-Company-Id). */
     currentCompanyId: number | null;
     setCompany: (id: number) => void;
@@ -24,10 +22,6 @@ interface UiState {
     remoteModuleNotices: RemoteModuleNotice[];
     pushRemoteModuleNotice: (notice: RemoteModuleNotice) => void;
     dismissRemoteModuleNotices: () => void;
-}
-
-function currentTheme(): Theme {
-    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 }
 
 function initialCompanyId(): number | null {
@@ -65,16 +59,6 @@ export const useUiStore = create<UiState>()((set) => ({
 
             return { navCollapsed };
         }),
-    theme: currentTheme(),
-    setTheme: (theme) => {
-        try {
-            localStorage.setItem('zenon.theme', theme);
-        } catch {
-            // storage unavailable (private mode) — theme still applies for the session
-        }
-        document.documentElement.classList.toggle('dark', theme === 'dark');
-        set({ theme });
-    },
     currentCompanyId: initialCompanyId(),
     setCompany: (id) => {
         // Company switch = full page reload, deliberate (design doc §2b). bootstrapQuery is

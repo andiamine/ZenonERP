@@ -1,11 +1,7 @@
 {
-  "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_mui_mf_1_material__loadShare__.js-CD_cUFNl.js": {
-    "file": "assets/_virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_mui_mf_1_material__loadShare__.js-CD_cUFNl.js",
+  "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_mui_mf_1_material__loadShare__.js-BXEFLfgs.js": {
+    "file": "assets/_virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_mui_mf_1_material__loadShare__.js-BXEFLfgs.js",
     "name": "_virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_mui_mf_1_material__loadShare__.js"
-  },
-  "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_mui_mf_1_material_mf_1_SvgIcon__loadShare__.js-aYDUpH2r.js": {
-    "file": "assets/_virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_mui_mf_1_material_mf_1_SvgIcon__loadShare__.js-aYDUpH2r.js",
-    "name": "_virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_mui_mf_1_material_mf_1_SvgIcon__loadShare__.js"
   },
   "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_tanstack_mf_1_react_mf_2_query__loadShare__.js-XRLOgQaH.js": {
     "file": "assets/_virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_tanstack_mf_1_react_mf_2_query__loadShare__.js-XRLOgQaH.js",
@@ -18,10 +14,6 @@
   "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_zenon_mf_1_core_mf_1_apiClient__loadShare__.js-DFjJ0sXj.js": {
     "file": "assets/_virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_zenon_mf_1_core_mf_1_apiClient__loadShare__.js-DFjJ0sXj.js",
     "name": "_virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_zenon_mf_1_core_mf_1_apiClient__loadShare__.js"
-  },
-  "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_zenon_mf_1_core_mf_1_ui__loadShare__.js-J8d0Q1xe.js": {
-    "file": "assets/_virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_zenon_mf_1_core_mf_1_ui__loadShare__.js-J8d0Q1xe.js",
-    "name": "_virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_zenon_mf_1_core_mf_1_ui__loadShare__.js"
   },
   "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare__react_mf_1_jsx_mf_2_runtime__loadShare__.js-DdWryXdB.js": {
     "file": "assets/_virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare__react_mf_1_jsx_mf_2_runtime__loadShare__.js-DdWryXdB.js",
@@ -51,7 +43,7 @@
     "name": "vite-preload-helper"
   },
   "resources/js/index.ts": {
-    "file": "assets/js-DbFdNpm7.js",
+    "file": "assets/js-WkBCCG6E.js",
     "name": "js",
     "src": "resources/js/index.ts",
     "isEntry": true,
@@ -79,29 +71,27 @@
     "isDynamicEntry": true
   },
   "resources/js/routes/demo-page.tsx": {
-    "file": "assets/demo-page-CCqXEtRU.js",
+    "file": "assets/demo-page-BNIfYQzk.js",
     "name": "demo-page",
     "src": "resources/js/routes/demo-page.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_mui_mf_1_material__loadShare__.js-CD_cUFNl.js",
-      "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_mui_mf_1_material_mf_1_SvgIcon__loadShare__.js-aYDUpH2r.js",
-      "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare__react_mf_1_jsx_mf_2_runtime__loadShare__.js-DdWryXdB.js",
+      "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_mui_mf_1_material__loadShare__.js-BXEFLfgs.js",
       "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare__react_mf_2_i18next__loadShare__.js-D2OsZLsO.js",
-      "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_zenon_mf_1_core_mf_1_ui__loadShare__.js-J8d0Q1xe.js",
-      "_api-DYAkAHHP.js"
+      "_api-DYAkAHHP.js",
+      "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare__react_mf_1_jsx_mf_2_runtime__loadShare__.js-DdWryXdB.js"
     ]
   },
   "resources/js/widgets/company-insights.tsx": {
-    "file": "assets/company-insights-u0DXCO6n.js",
+    "file": "assets/company-insights-CB-k0m3N.js",
     "name": "company-insights",
     "src": "resources/js/widgets/company-insights.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare__react_mf_1_jsx_mf_2_runtime__loadShare__.js-DdWryXdB.js",
+      "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_mui_mf_1_material__loadShare__.js-BXEFLfgs.js",
       "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare__react_mf_2_i18next__loadShare__.js-D2OsZLsO.js",
-      "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare___mf_0_zenon_mf_1_core_mf_1_ui__loadShare__.js-J8d0Q1xe.js",
-      "_api-DYAkAHHP.js"
+      "_api-DYAkAHHP.js",
+      "__virtual_mf___mfe_internal__zenon_addon_demo__mf_owner__1__loadShare__react_mf_1_jsx_mf_2_runtime__loadShare__.js-DdWryXdB.js"
     ]
   },
   "virtual:mf-REMOTE_ENTRY_ID:__mfe_internal__zenon_addon_demo__remoteEntry_js": {
@@ -118,7 +108,7 @@
     ]
   },
   "virtual:mf-exposes:__mfe_internal__zenon_addon_demo__remoteEntry_js": {
-    "file": "assets/virtualExposes-CeZTugAT.js",
+    "file": "assets/virtualExposes-CfMRXPaG.js",
     "name": "virtualExposes",
     "src": "virtual:mf-exposes:__mfe_internal__zenon_addon_demo__remoteEntry_js",
     "imports": [
